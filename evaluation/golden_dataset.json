@@ -1,0 +1,66 @@
+[
+  {
+    "id": "eval_001",
+    "query": "What are the three primary active-active cloud regions and their SLA uptime requirement?",
+    "ground_truth": "The platform operates across us-east-1 (North Virginia), eu-west-1 (Ireland), and ap-southeast-1 (Singapore) with an SLA of 99.99% uptime and max 52.56 minutes annualized downtime.",
+    "target_doc": "cloud_architecture.md",
+    "target_page": 1,
+    "context_reference": "The Global Cloud Platform operates across three primary active-active regions: us-east-1 (North Virginia), eu-west-1 (Ireland), and ap-southeast-1 (Singapore). All tier-1 core microservices require a minimum service level agreement (SLA) of 99.99% uptime with an annualized unplanned downtime budget not exceeding 52.56 minutes."
+  },
+  {
+    "id": "eval_002",
+    "query": "What are the latency budgets for the internal API Gateway Router and Vector Database engine?",
+    "ground_truth": "The internal API Gateway Router has a 15ms p99 latency budget, and the Vector Database Query Engine has a 30ms p95 latency budget.",
+    "target_doc": "cloud_architecture.md",
+    "target_page": 1,
+    "context_reference": "Internal API Gateway Router: 15ms p99 latency. Vector Database Query Engine: 30ms p95 latency."
+  },
+  {
+    "id": "eval_003",
+    "query": "What are the exact RTO and RPO targets during a total regional outage?",
+    "ground_truth": "Recovery Time Objective (RTO) is 2 minutes, and Recovery Point Objective (RPO) is 0 seconds via synchronous multi-region CockroachDB replication.",
+    "target_doc": "cloud_architecture.md",
+    "target_page": 1,
+    "context_reference": "The Recovery Time Objective (RTO) is strictly set to 2 minutes, and the Recovery Point Objective (RPO) for transactional data is 0 seconds via synchronous multi-region CockroachDB replication."
+  },
+  {
+    "id": "eval_004",
+    "query": "How often are vector index backups taken and where are they stored?",
+    "ground_truth": "Vector indexes are snapshotted every 4 hours to Amazon S3 Glacier Flexible Retrieval with a 30-day retention lock.",
+    "target_doc": "cloud_architecture.md",
+    "target_page": 1,
+    "context_reference": "Asynchronous backups of vector indexes are snapshotted every 4 hours to Amazon S3 Glacier Flexible Retrieval with a 30-day retention lock."
+  },
+  {
+    "id": "eval_005",
+    "query": "What encryption standard is required for data at rest and how frequently are KMS keys rotated?",
+    "ground_truth": "Data at rest must be encrypted using AES-256 with customer-managed keys (CMK) rotated automatically every 90 days via AWS KMS.",
+    "target_doc": "security_compliance.md",
+    "target_page": 1,
+    "context_reference": "Data at rest across all persistent storage volumes (EBS, S3, Qdrant Vector DB, RDS) must be encrypted using AES-256 with customer-managed keys (CMK) rotated automatically every 90 days via AWS KMS."
+  },
+  {
+    "id": "eval_006",
+    "query": "What is the maximum time-to-live (TTL) for service account IAM OIDC tokens?",
+    "ground_truth": "Service accounts use short-lived IAM OIDC tokens with a maximum TTL of 1 hour.",
+    "target_doc": "security_compliance.md",
+    "target_page": 1,
+    "context_reference": "Service accounts authenticate using short-lived IAM OIDC tokens with a maximum time-to-live (TTL) of 1 hour."
+  },
+  {
+    "id": "eval_007",
+    "query": "What is the data retention schedule for API request logs in hot S3 vs Glacier Deep Archive?",
+    "ground_truth": "API request logs are retained in hot S3 storage for 90 days, then moved to S3 Glacier Deep Archive for 7 years.",
+    "target_doc": "security_compliance.md",
+    "target_page": 1,
+    "context_reference": "Application access and API request logs must be retained in hot S3 storage for 90 days, followed by automated transition to S3 Glacier Deep Archive for 7 years to comply with SOC-2 and HIPAA regulations."
+  },
+  {
+    "id": "eval_008",
+    "query": "What is the remediation SLA for critical severity vulnerabilities with CVSS 9.0-10.0?",
+    "ground_truth": "Critical severity vulnerabilities must be mitigated and patched within 24 hours of discovery.",
+    "target_doc": "security_compliance.md",
+    "target_page": 1,
+    "context_reference": "Critical severity vulnerabilities (CVSS score 9.0 - 10.0) must be mitigated and patched within 24 hours of discovery."
+  }
+]
