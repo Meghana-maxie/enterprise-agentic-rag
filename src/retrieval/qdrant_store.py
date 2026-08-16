@@ -9,6 +9,10 @@ from src.ingestion.chunker import TextChunk
 from config.settings import settings
 
 
+# Shared in-process client cache to avoid Windows portalocker collisions on the same folder
+_CLIENT_CACHE: Dict[str, QdrantClient] = {}
+
+
 class QdrantVectorStore:
     """Dense vector database client powered by FastEmbed and Qdrant."""
 
@@ -25,12 +29,17 @@ class QdrantVectorStore:
         # Initialize FastEmbed ONNX model
         self.embedder = TextEmbedding(model_name=self.embedding_model_name)
 
-        # Initialize Qdrant Client (local persistent storage or remote URL)
-        if url:
-            self.client = QdrantClient(url=url)
+        # Initialize Qdrant Client (cached singleton per path/url)
+        cache_key = url if url else str(Path(storage_path).resolve())
+        if cache_key in _CLIENT_CACHE:
+            self.client = _CLIENT_CACHE[cache_key]
         else:
-            Path(storage_path).mkdir(parents=True, exist_ok=True)
-            self.client = QdrantClient(path=storage_path)
+            if url:
+                self.client = QdrantClient(url=url)
+            else:
+                Path(storage_path).mkdir(parents=True, exist_ok=True)
+                self.client = QdrantClient(path=storage_path)
+            _CLIENT_CACHE[cache_key] = self.client
 
         self._ensure_collection()
 

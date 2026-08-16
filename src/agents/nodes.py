@@ -4,6 +4,7 @@ import json
 import re
 from typing import Dict, Any, List
 import anthropic
+from src.llm.base_client import BaseLLMClient, OllamaClient, AnthropicClient
 from src.agents.state import AgentState
 from src.guardrails.input_guard import InputGuardrail
 from src.guardrails.output_guard import OutputGuardrail
@@ -33,11 +34,19 @@ class AgentNodeRunner:
                 self.anthropic_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
             except Exception:
                 self.anthropic_client = None
+        # Provider‑agnostic client (default Ollama)
+        if settings.LLM_PROVIDER == "ollama":
+            self.llm_client: BaseLLMClient = OllamaClient()
+        elif settings.LLM_PROVIDER == "anthropic":
+            self.llm_client = AnthropicClient()
+        else:
+            raise ValueError(f"Unsupported LLM_PROVIDER: {settings.LLM_PROVIDER}")
 
     def _call_claude(self, system_prompt: str, user_prompt: str, max_tokens: int = 1000) -> str:
         """Helper to invoke Claude Haiku with robust error handling and mock fallback."""
         if not self.anthropic_client:
-            return self._mock_claude_response(system_prompt, user_prompt)
+            # No Anthropic client – delegate to the generic client (Ollama or other)
+            return self.llm_client.generate(system_prompt, user_prompt, max_tokens)
 
         try:
             response = self.anthropic_client.messages.create(
@@ -52,18 +61,7 @@ class AgentNodeRunner:
             # Fallback to deterministic synthesis if API fails or rate-limits
             return f"[API Fallback Response]: Generated answer based on context. Error: {str(e)}"
 
-    def _mock_claude_response(self, system_prompt: str, user_prompt: str) -> str:
-        """Deterministic response generator for offline unit tests without API keys."""
-        if "router" in system_prompt.lower():
-            if any(w in user_prompt.lower() for w in ["hi", "hello", "who are you", "what is 2+2"]):
-                return json.dumps({"route": "direct", "transformed_query": user_prompt})
-            return json.dumps({"route": "rag", "transformed_query": user_prompt})
-
-        # Synthesis fallback
-        context_match = re.search(r"\[DOC_CONTEXT\]:(.*)", user_prompt, re.DOTALL)
-        ctx = context_match.group(1).strip() if context_match else ""
-        return f"Based on the enterprise documentation, here is the answer: {ctx[:200]}... [sample_doc.md:1]"
-
+   
     # 1. Input Guardrail Node
     def input_guard_node(self, state: AgentState) -> Dict[str, Any]:
         """Sanitize query, strip PII, and detect adversarial prompt injection."""

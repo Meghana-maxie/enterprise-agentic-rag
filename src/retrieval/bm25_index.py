@@ -4,32 +4,32 @@ import re
 import pickle
 from pathlib import Path
 from typing import List, Dict, Any
-from rank_bm25 import BM25Okapi
+from rank_bm25 import BM25Plus
 from src.ingestion.chunker import TextChunk
 from config.settings import settings
 
 
 class BM25Index:
-    """Sparse lexical search index utilizing BM25Okapi."""
+    """Sparse lexical search index utilizing BM25Plus."""
 
     def __init__(self, storage_path: str = settings.BM25_INDEX_PATH):
         self.storage_path = Path(storage_path)
         self.chunks: List[TextChunk] = []
         self.tokenized_corpus: List[List[str]] = []
-        self.bm25: BM25Okapi | None = None
+        self.bm25: BM25Plus | None = None
         self._load_if_exists()
 
     @staticmethod
     def tokenize(text: str) -> List[str]:
-        """Simple, fast regex-based lowercase tokenizer."""
-        return re.findall(r"\b[a-zA-Z0-9_-]+\b", text.lower())
+        """Simple, fast lowercase alphanumeric tokenizer splitting on punctuation/hyphens."""
+        return re.findall(r"\b[a-zA-Z0-9]+\b", text.lower())
 
     def build_index(self, chunks: List[TextChunk]) -> None:
         """Construct BM25 index from a list of TextChunk objects and persist to disk."""
         self.chunks = list(chunks)
         self.tokenized_corpus = [self.tokenize(c.content) for c in self.chunks]
         if self.tokenized_corpus:
-            self.bm25 = BM25Okapi(self.tokenized_corpus)
+            self.bm25 = BM25Plus(self.tokenized_corpus)
         else:
             self.bm25 = None
         self.save()

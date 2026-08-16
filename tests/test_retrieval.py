@@ -1,9 +1,10 @@
-"""Unit tests for Document Chunking, BM25 Index, and Hybrid Search Engine."""
+"""Unit tests for Document Chunking, BM25 Index, Qdrant Vector Store, and Hybrid Search Engine."""
 
 import pytest
 from src.ingestion.loaders import LoadedPage
 from src.ingestion.chunker import RecursiveChunker
 from src.retrieval.bm25_index import BM25Index
+from src.retrieval.qdrant_store import QdrantVectorStore
 from src.retrieval.hybrid_engine import HybridSearchEngine
 
 
@@ -65,6 +66,34 @@ def test_reciprocal_rank_fusion():
     fused = engine.reciprocal_rank_fusion(dense_results, sparse_results)
 
     # chunk_2 appears in both dense (rank 2) and sparse (rank 1), so it should score highest
+    # dense score: 1/(60+2) = 1/62 = 0.016129
+    # sparse score: 1/(60+1) = 1/61 = 0.016393
+    # total chunk_2 score: 0.032522 vs chunk_1: 1/(60+1)=0.016393
     assert len(fused) == 3
     assert fused[0]["chunk_id"] == "chunk_2"
     assert fused[0]["rrf_score"] > fused[1]["rrf_score"]
+    assert pytest.approx(fused[0]["rrf_score"], 0.0001) == (1/62 + 1/61)
+
+
+def test_qdrant_vector_store_real_insertion_and_search(tmp_path):
+    """Verify real Qdrant vector store inserts embeddings and performs cosine similarity search."""
+    storage_dir = tmp_path / "test_qdrant"
+    store = QdrantVectorStore(
+        collection_name="test_collection",
+        storage_path=str(storage_dir)
+    )
+
+    chunker = RecursiveChunker(chunk_size=200, chunk_overlap=20)
+    pages = [
+        LoadedPage(doc_name="cloud.md", page_number=1, text="The platform operates across us-east-1, eu-west-1, and ap-southeast-1."),
+        LoadedPage(doc_name="security.md", page_number=1, text="All customer data is encrypted using AES-256 with KMS keys."),
+    ]
+    chunks = chunker.chunk_pages(pages)
+    count = store.add_chunks(chunks)
+    assert count == 2
+
+    # Query semantic vector search
+    hits = store.search("geographic regions and availability zones", limit=2)
+    assert len(hits) == 2
+    assert hits[0]["doc_name"] == "cloud.md"
+    assert hits[0]["score"] > 0.3

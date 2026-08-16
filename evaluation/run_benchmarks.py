@@ -1,11 +1,15 @@
-"""Offline LLMOps Benchmark Runner & Automated Evaluation Report Generator."""
-
+import sys
 import json
 import time
 from pathlib import Path
 from typing import List, Dict, Any
-import numpy as np
 
+# Ensure project root is in sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
+import numpy as np
 from src.ingestion.loaders import DocumentLoader
 from src.ingestion.chunker import RecursiveChunker
 from src.retrieval.hybrid_engine import HybridSearchEngine
@@ -22,7 +26,7 @@ def run_benchmark_suite(
 ) -> Dict[str, Any]:
     """Execute complete offline evaluation benchmark across the golden test suite."""
     print("=" * 70)
-    print("🚀 ENTERPRISE AGENTIC HYBRID RAG - OFFLINE BENCHMARK HARNESS")
+    print("[LLMOps] ENTERPRISE AGENTIC HYBRID RAG - OFFLINE BENCHMARK HARNESS")
     print("=" * 70)
 
     # 1. Ingest sample documents into hybrid indices
@@ -33,7 +37,7 @@ def run_benchmark_suite(
 
     hybrid_engine = HybridSearchEngine()
     hybrid_engine.index_chunks(chunks)
-    print(f"      ✓ Indexed {len(chunks)} chunks across Qdrant Dense & BM25 Sparse stores.")
+    print(f"      [OK] Indexed {len(chunks)} chunks across Qdrant Dense & BM25 Sparse stores.")
 
     # 2. Build LangGraph and Judge
     node_runner = AgentNodeRunner(hybrid_engine=hybrid_engine)
@@ -45,7 +49,7 @@ def run_benchmark_suite(
     with open(golden_dataset_path, "r", encoding="utf-8") as f:
         test_samples = json.load(f)
 
-    print(f"      ✓ Loaded {len(test_samples)} golden test triplets.\n")
+    print(f"      [OK] Loaded {len(test_samples)} golden test triplets.\n")
 
     results: List[Dict[str, Any]] = []
     latencies_ms: List[float] = []
@@ -105,7 +109,7 @@ def run_benchmark_suite(
             "critic_verdict": final_state.get("critic_verdict", "PASS"),
         })
 
-        print(f"  [{idx:02d}/{len(test_samples):02d}] '{query[:45]}...' -> Faithfulness: {metrics.faithfulness:.2f} | Precision: {metrics.context_precision:.2f} | {elapsed_ms:.1f}ms")
+        print(f"  [{idx:02d}/{len(test_samples):02d}] '{query[:40]}...' -> Faithfulness: {metrics.faithfulness:.2f} | Precision: {metrics.context_precision:.2f} | {elapsed_ms:.1f}ms")
 
     # 4. Compute Aggregate Statistics
     avg_faithfulness = float(np.mean([r["faithfulness"] for r in results]))
@@ -124,7 +128,7 @@ Generated at: {time.strftime('%Y-%m-%d %H:%M:%S')}
 Total Test Queries: {len(test_samples)}  
 Embedding Model: `{settings.EMBEDDING_MODEL}`  
 Reranker: `{settings.RERANKER_MODEL}`  
-LLM Provider: `{settings.ANTHROPIC_MODEL}`
+LLM Provider: `{settings.OLLAMA_MODEL if settings.LLM_PROVIDER == "ollama" else settings.ANTHROPIC_MODEL}`
 
 ---
 
@@ -132,10 +136,10 @@ LLM Provider: `{settings.ANTHROPIC_MODEL}`
 
 | Evaluation Metric | Target Threshold | Achieved Score | Status |
 | :--- | :--- | :--- | :--- |
-| **Faithfulness (Groundedness)** | $\ge 0.85$ | **{avg_faithfulness:.3f}** | {'✅ PASS' if avg_faithfulness >= 0.85 else '⚠️ ACCEPTABLE'} |
-| **Answer Relevance** | $\ge 0.80$ | **{avg_relevance:.3f}** | {'✅ PASS' if avg_relevance >= 0.80 else '⚠️ ACCEPTABLE'} |
-| **Context Precision@K** | $\ge 0.80$ | **{avg_precision:.3f}** | {'✅ PASS' if avg_precision >= 0.80 else '⚠️ ACCEPTABLE'} |
-| **Context Recall** | $\ge 0.80$ | **{avg_recall:.3f}** | {'✅ PASS' if avg_recall >= 0.80 else '⚠️ ACCEPTABLE'} |
+| **Faithfulness (Groundedness)** | >= 0.85 | **{avg_faithfulness:.3f}** | {'[PASS]' if avg_faithfulness >= 0.85 else '[FAIL]'} |
+| **Answer Relevance** | >= 0.80 | **{avg_relevance:.3f}** | {'[PASS]' if avg_relevance >= 0.80 else '[FAIL]'} |
+| **Context Precision@K** | >= 0.80 | **{avg_precision:.3f}** | {'[PASS]' if avg_precision >= 0.80 else '[FAIL]'} |
+| **Context Recall** | >= 0.80 | **{avg_recall:.3f}** | {'[PASS]' if avg_recall >= 0.80 else '[FAIL]'} |
 
 ---
 

@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 class QueryRequest(BaseModel):
     """User query input payload."""
-    query: str = Field(..., min_length=1, description="Raw query string", example="What is the data retention policy?")
+    query: str = Field(..., min_length=1, description="Raw query string", json_schema_extra={"example": "What is the data retention policy?"})
 
 
 class CitationDetail(BaseModel):

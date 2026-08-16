@@ -1,10 +1,15 @@
-"""LLM-assisted Synthetic Golden Dataset Generator for RAG Evaluation."""
-
+import sys
 import json
 import re
 import argparse
 from pathlib import Path
 from typing import List, Dict, Any
+
+# Ensure project root is in sys.path
+BASE_DIR = Path(__file__).resolve().parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+
 import anthropic
 from src.ingestion.loaders import DocumentLoader
 from src.ingestion.chunker import RecursiveChunker

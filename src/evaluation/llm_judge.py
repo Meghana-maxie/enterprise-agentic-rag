@@ -4,9 +4,12 @@ import json
 import re
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
+# Keep anthropic import for potential direct use in AnthropicClient
 import anthropic
 from config.settings import settings
 
+# Provider‑agnostic LLM client abstractions
+from src.llm.base_client import BaseLLMClient, OllamaClient, AnthropicClient
 
 class BenchmarkMetrics(BaseModel):
     """Evaluation metrics for a single query."""
@@ -18,13 +21,19 @@ class BenchmarkMetrics(BaseModel):
 
 
 class ClaudeLLMJudge:
-    """Offline batch evaluation judge leveraging Claude Haiku."""
+    """Offline batch evaluation judge leveraging a LLM provider."""
 
     def __init__(self, api_key: str = settings.ANTHROPIC_API_KEY, model: str = settings.ANTHROPIC_MODEL):
         self.api_key = api_key
         self.model = model
-        self.client = anthropic.Anthropic(api_key=api_key) if api_key and api_key != "mock-key" else None
-
+        # Initialise the appropriate client based on settings.LLM_PROVIDER
+        if settings.LLM_PROVIDER == "ollama":
+            self.client: BaseLLMClient = OllamaClient()
+        elif settings.LLM_PROVIDER == "anthropic":
+            # Use Anthropic client only when a real key is supplied; otherwise None (fallback will trigger heuristic)
+            self.client = AnthropicClient(api_key=api_key, model=model) if api_key and api_key != "mock-key" else None
+        else:
+            raise ValueError(f"Unsupported LLM_PROVIDER: {settings.LLM_PROVIDER}")
     def evaluate_sample(
         self,
         query: str,
@@ -33,10 +42,6 @@ class ClaudeLLMJudge:
         ground_truth: str
     ) -> BenchmarkMetrics:
         """Score Faithfulness, Answer Relevance, Context Precision, and Context Recall."""
-        if not self.client:
-            # Fallback heuristic calculation if API key is not configured
-            return self._heuristic_fallback(query, retrieved_contexts, generated_answer, ground_truth)
-
         prompt = f"""You are an expert AI evaluation judge for an Enterprise RAG system.
 Evaluate the generated answer and retrieved context against the user query and ground truth.
 
@@ -62,14 +67,12 @@ Output ONLY a valid JSON object in this exact schema:
 }}"""
 
         try:
-            response = self.client.messages.create(
-                model=self.model,
-                max_tokens=500,
-                temperature=0.0,
-                system="You are an objective evaluation evaluator. Return only JSON.",
-                messages=[{"role": "user", "content": prompt}]
+            raw_text = self.client.generate(
+                system_prompt="You are an objective evaluation evaluator. Return only JSON.",
+                user_prompt=prompt,
+                max_tokens=500
             )
-            raw_text = response.content[0].text
+            print(f"=== RAW OLLAMA OUTPUT ===\n{raw_text}\n=========================")
             json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
             if json_match:
                 data = json.loads(json_match.group(0))
@@ -80,10 +83,11 @@ Output ONLY a valid JSON object in this exact schema:
                     context_recall=float(data.get("context_recall", 0.8)),
                     reasoning=data.get("reasoning", "")
                 )
+            raise ValueError(f"No JSON object found in model response: {raw_text}")
         except Exception as e:
-            pass
+            print(f"LLM judge evaluation failed: {e}")
+            raise
 
-        return self._heuristic_fallback(query, retrieved_contexts, generated_answer, ground_truth)
 
     @staticmethod
     def _heuristic_fallback(

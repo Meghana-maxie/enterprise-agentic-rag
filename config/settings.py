@@ -12,7 +12,9 @@ class Settings(BaseSettings):
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
     DATA_DIR: Path = BASE_DIR / "data"
 
-    # LLM Settings (Anthropic)
+    # LLM Settings
+    LLM_PROVIDER: str = "ollama" 
+    OLLAMA_MODEL: str = "llama3.2:3b"
     ANTHROPIC_API_KEY: str = "mock-key"
     ANTHROPIC_MODEL: str = "claude-3-5-haiku-20241022"
     LLM_TEMPERATURE: float = 0.0
@@ -29,13 +31,13 @@ class Settings(BaseSettings):
     BM25_INDEX_PATH: str = str(BASE_DIR / "data" / "bm25_index.pkl")
 
     # Local Reranker
-    RERANKER_MODEL: str = "ms-marco-MiniLM-L-6-v2"
+    RERANKER_MODEL: str = "ms-marco-MiniLM-L-12-v2"
 
     # Retrieval & Routing Parameters
-    TOP_K_RETRIEVAL: int = 10
+    TOP_K_RETRIEVAL: int = 12
     TOP_K_RERANK: int = 4
     RRF_K: int = 60  # Reciprocal Rank Fusion constant
-    FAITHFULNESS_THRESHOLD: float = 0.70
+    FAITHFULNESS_THRESHOLD: float = 0.85
     MAX_CRITIC_RETRIES: int = 1
 
     # Ingestion Parameters
