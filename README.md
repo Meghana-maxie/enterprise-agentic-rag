@@ -35,7 +35,7 @@ flowchart TD
     LocalReranker --> TopKContext[Top-K Filtered Chunks + Metadata]
     TopKContext --> SynthesisNode[4. Synthesis & Strict Citation Node - Claude Haiku]
     
-    SynthesisNode --> CriticNode{5. Inline Critic Node\nLocal NLI Entailment >= 0.70?}
+    SynthesisNode --> CriticNode{5. Inline Critic Node\nLexical Grounding Overlap >= 0.70?}
     
     CriticNode -->|Pass| OutputGuard[6. Output Guardrail: Schema Validation & Citation Integrity]
     CriticNode -->|Fail & Retry == 0| RefineQuery[Query Refinement & Context Expansion]
@@ -71,7 +71,7 @@ flowchart TD
    - **Input Gatekeeper:** Zero-dependency compiled regex redacting PII (SSN, Email, Phone, Credit Cards, API Tokens) and blocking prompt injections prior to LLM invocation.
    - **Output Gatekeeper:** Validates Pydantic response schemas and mathematically verifies that every inline citation `[doc:page]` maps to actual retrieved chunks.
 5. **Decoupled Evaluation Strategy (Online vs. Offline):**
-   - **Live Inline Critic:** Fast local NLI claim entailment checker (<15ms) operating on token overlap and semantic entailment to guard against hallucinations without secondary API costs.
+   - **Live Inline Critic:** Fast local lexical grounding checker (<15ms) operating on token overlap between synthesized claims and retrieved context, flagging ungrounded claims without secondary API costs.
    - **Offline LLMOps Benchmarking:** Claude Haiku LLM-as-a-Judge running against `golden_dataset.json` measuring Faithfulness, Context Precision@K, Recall, and Relevance.
 
 ---
@@ -79,7 +79,7 @@ flowchart TD
 ## 📄 ATS-Optimized Resume Bullet Points (Copy & Paste)
 
 > - **Built a multi-agent RAG system using LangGraph cyclic state machines, Qdrant vector store, and BM25 lexical search combined via Reciprocal Rank Fusion (RRF, $k=60$).**
-> - **Integrated a local ONNX cross-encoder reranker (FlashRank ms-marco-MiniLM-L-12-v2, ≈42 ms mean per query) and sub‑15ms local NLI claim‑verification critic node to self‑correct under‑grounded answers with a bounded single‑retry loop.**
+> - **Integrated a local ONNX cross-encoder reranker (FlashRank ms-marco-MiniLM-L-12-v2, ~42 ms mean per query) and sub-15ms local lexical grounding critic node to self-correct under-grounded answers with a bounded single-retry loop.**
 > - **Implemented 2-stage deterministic guardrails for regex-based PII redaction (SSN, email, phone, API keys), prompt injection detection, and post-synthesis citation integrity validation against source chunk IDs.**
 > - **Developed an automated LLMOps evaluation pipeline benchmarking Faithfulness (0.92), Context Precision (0.88), and latency percentiles (P50: 420ms) using Claude LLM-as-a-Judge over synthetic golden datasets.**
 
