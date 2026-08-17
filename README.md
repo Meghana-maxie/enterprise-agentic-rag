@@ -6,7 +6,7 @@
 [![FastAPI](https://img.shields.io/badge/API-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An enterprise-grade, multi-agent Retrieval-Augmented Generation (RAG) system engineered with **LangGraph state machines**, **Dense-Sparse Hybrid Search (FastEmbed BGE + BM25)**, **Reciprocal Rank Fusion (RRF)**, **Local Cross-Encoder Reranking (FlashRank)**, **2-Stage Deterministic Guardrails**, and an **Automated LLMOps Evaluation Suite** benchmarking Faithfulness, Context Precision, and latency percentiles.
+An enterprise-grade, multi-stage agentic Retrieval-Augmented Generation (RAG) system engineered with **LangGraph state machines**, **Dense-Sparse Hybrid Search (FastEmbed BGE + BM25)**, **Reciprocal Rank Fusion (RRF)**, **Local Cross-Encoder Reranking (FlashRank)**, **2-Stage Deterministic Guardrails**, and an **Automated LLMOps Evaluation Suite** benchmarking Faithfulness, Context Precision, and latency percentiles.
 
 ---
 
@@ -78,7 +78,7 @@ flowchart TD
 
 ## 📄 ATS-Optimized Resume Bullet Points (Copy & Paste)
 
-> - **Built a multi-agent RAG system using LangGraph cyclic state machines, Qdrant vector store, and BM25 lexical search combined via Reciprocal Rank Fusion (RRF, $k=60$).**
+> - **Built a multi-stage agentic RAG system using LangGraph cyclic state machines, Qdrant vector store, and BM25 lexical search combined via Reciprocal Rank Fusion (RRF, $k=60$).**
 > - **Integrated a local ONNX cross-encoder reranker (FlashRank ms-marco-MiniLM-L-12-v2, ~42 ms mean per query) and sub-15ms local lexical grounding critic node to self-correct under-grounded answers with a bounded single-retry loop.**
 > - **Implemented 2-stage deterministic guardrails for regex-based PII redaction (SSN, email, phone, API keys), prompt injection detection, and post-synthesis citation integrity validation against source chunk IDs.**
 > - **Developed an automated LLMOps evaluation pipeline benchmarking Faithfulness (0.92), Context Precision (0.88), and latency percentiles (P50: 420ms) using Claude LLM-as-a-Judge over synthetic golden datasets.**
@@ -155,7 +155,7 @@ docker-compose up --build -d
 ## 🔌 API Reference
 
 ### `POST /api/v1/query`
-Executes end-to-end multi-agent retrieval and synthesis.
+Executes end-to-end multi-stage retrieval and synthesis.
 
 **Request:**
 ```json
