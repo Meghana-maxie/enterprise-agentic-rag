@@ -1,9 +1,11 @@
-"""LangGraph node definitions for enterprise agentic RAG pipeline."""
+﻿"""LangGraph node definitions for enterprise agentic RAG pipeline."""
 
-import json
 import re
+import json
+import logging
 from typing import Dict, Any, List
 import anthropic
+log = logging.getLogger(__name__)
 from src.llm.base_client import BaseLLMClient, OllamaClient, AnthropicClient
 from src.agents.state import AgentState
 from src.guardrails.input_guard import InputGuardrail
@@ -11,6 +13,11 @@ from src.guardrails.output_guard import OutputGuardrail
 from src.retrieval.hybrid_engine import HybridSearchEngine
 from src.evaluation.nli_evaluator import LexicalGroundingEvaluator
 from config.settings import settings
+
+
+
+class LLMGenerationError(Exception):
+    """Raised when the configured LLM provider fails to generate a response."""
 
 
 class AgentNodeRunner:
@@ -34,7 +41,7 @@ class AgentNodeRunner:
                 self.anthropic_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
             except Exception:
                 self.anthropic_client = None
-        # Provider‑agnostic client (default Ollama)
+        # Providerâ€‘agnostic client (default Ollama)
         if settings.LLM_PROVIDER == "ollama":
             self.llm_client: BaseLLMClient = OllamaClient()
         elif settings.LLM_PROVIDER == "anthropic":
@@ -45,7 +52,7 @@ class AgentNodeRunner:
     def _call_claude(self, system_prompt: str, user_prompt: str, max_tokens: int = 1000) -> str:
         """Helper to invoke Claude Haiku with robust error handling and mock fallback."""
         if not self.anthropic_client:
-            # No Anthropic client – delegate to the generic client (Ollama or other)
+            # No Anthropic client - delegate to the generic client (Ollama or other)
             return self.llm_client.generate(system_prompt, user_prompt, max_tokens)
 
         try:
@@ -58,9 +65,8 @@ class AgentNodeRunner:
             )
             return response.content[0].text
         except Exception as e:
-            # Fallback to deterministic synthesis if API fails or rate-limits
-            return f"[API Fallback Response]: Generated answer based on context. Error: {str(e)}"
-
+            log.error("LLM generation failed: %s", type(e).__name__)
+            raise LLMGenerationError(f"LLM provider call failed: {type(e).__name__}") from e
    
     # 1. Input Guardrail Node
     def input_guard_node(self, state: AgentState) -> Dict[str, Any]:
@@ -100,16 +106,17 @@ Respond ONLY with valid JSON:
 {"route": "direct" | "rag", "transformed_query": "expanded query text"}"""
 
         user_prompt = f"User Query: {sanitized_query}{retry_prompt_mod}"
-        raw_response = self._call_claude(system_prompt, user_prompt, max_tokens=200)
-
         route = "rag"
         transformed_query = sanitized_query
         try:
+            raw_response = self._call_claude(system_prompt, user_prompt, max_tokens=200)
             json_match = re.search(r"\{.*\}", raw_response, re.DOTALL)
             if json_match:
                 parsed = json.loads(json_match.group(0))
                 route = parsed.get("route", "rag")
                 transformed_query = parsed.get("transformed_query", sanitized_query)
+        except LLMGenerationError:
+            route = "rag"
         except Exception:
             route = "rag"
 
@@ -152,10 +159,21 @@ Respond ONLY with valid JSON:
 
         if route == "direct":
             system_prompt = "You are a concise, professional enterprise AI assistant. Answer directly and politely."
-            answer = self._call_claude(system_prompt, sanitized_query, max_tokens=500)
+            try:
+                answer = self._call_claude(system_prompt, sanitized_query, max_tokens=500)
+            except LLMGenerationError as e:
+                trace.append(f"SynthesisNode: generation failed on direct route ({e})")
+                return {
+                    "synthesized_answer": "",
+                    "synthesis_failed": True,
+                    "synthesis_error": str(e),
+                    "execution_trace": trace,
+                }
             trace.append("SynthesisNode: direct response generated")
             return {
                 "synthesized_answer": answer,
+                "synthesis_failed": False,
+                "synthesis_error": None,
                 "execution_trace": trace,
             }
 
@@ -183,11 +201,22 @@ Rules:
 
 [ANSWER]:"""
 
-        synthesized_text = self._call_claude(system_prompt, user_prompt, max_tokens=settings.LLM_MAX_TOKENS)
+        try:
+            synthesized_text = self._call_claude(system_prompt, user_prompt, max_tokens=settings.LLM_MAX_TOKENS)
+        except LLMGenerationError as e:
+            trace.append(f"SynthesisNode: generation failed on rag route ({e})")
+            return {
+                "synthesized_answer": "",
+                "synthesis_failed": True,
+                "synthesis_error": str(e),
+                "execution_trace": trace,
+            }
         trace.append(f"SynthesisNode: synthesized answer ({len(synthesized_text)} chars)")
 
         return {
             "synthesized_answer": synthesized_text,
+            "synthesis_failed": False,
+            "synthesis_error": None,
             "execution_trace": trace,
         }
 
@@ -204,6 +233,15 @@ Rules:
                 "faithfulness_score": 1.0,
                 "critic_verdict": "PASS",
                 "critic_feedback": "Direct route pass.",
+                "execution_trace": trace,
+            }
+        if state.get("synthesis_failed", False):
+            trace.append("CriticNode: skipped, upstream synthesis failed")
+            return {
+                "faithfulness_score": 0.0,
+                "critic_verdict": "FAIL",
+                "critic_feedback": "Synthesis failed upstream — no answer was generated to evaluate.",
+                "retry_count": state.get("retry_count", 0),
                 "execution_trace": trace,
             }
 
@@ -233,6 +271,16 @@ Rules:
         chunks = state.get("reranked_chunks", [])
         faithfulness_score = state.get("faithfulness_score", 1.0)
         trace = list(state.get("execution_trace", []))
+        
+        if state.get("synthesis_failed", False):
+            trace.append("OutputGuard: skipped, upstream synthesis failed")
+            return {
+                "synthesized_answer": "",
+                "verified_citations": [],
+                "invalid_citations": [],
+                "guardrail_warnings": ["Answer generation failed upstream. No response could be validated."],
+                "execution_trace": trace,
+            }
 
         guard_result = self.output_guard.validate(
             answer_text=answer,

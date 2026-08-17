@@ -41,7 +41,7 @@ class OllamaClient(BaseLLMClient):
             "stream": False,
         }
         log.info("🟢 Ollama request payload → %s", json.dumps(payload))
-        response = requests.post(self.endpoint, json=payload, timeout=30)
+        response = requests.post(self.endpoint, json=payload, timeout=90)
         response.raise_for_status()
         raw = response.json()
         log.info("🔵 Ollama raw response  → %s", json.dumps(raw))

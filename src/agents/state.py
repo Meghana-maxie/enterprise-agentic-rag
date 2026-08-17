@@ -35,6 +35,8 @@ class AgentState(TypedDict):
 
     # Synthesis & Citations
     synthesized_answer: str
+    synthesis_failed: bool
+    synthesis_error: Optional[str]
     verified_citations: List[Dict[str, Any]]
     invalid_citations: List[str]
     guardrail_warnings: List[str]
