@@ -9,7 +9,7 @@ from src.agents.state import AgentState
 from src.guardrails.input_guard import InputGuardrail
 from src.guardrails.output_guard import OutputGuardrail
 from src.retrieval.hybrid_engine import HybridSearchEngine
-from src.evaluation.nli_evaluator import LocalNLIEvaluator
+from src.evaluation.nli_evaluator import LexicalGroundingEvaluator
 from config.settings import settings
 
 
@@ -21,12 +21,12 @@ class AgentNodeRunner:
         hybrid_engine: HybridSearchEngine | None = None,
         input_guard: InputGuardrail | None = None,
         output_guard: OutputGuardrail | None = None,
-        nli_evaluator: LocalNLIEvaluator | None = None,
+        grounding_evaluator: LexicalGroundingEvaluator | None = None,
     ):
         self.hybrid_engine = hybrid_engine or HybridSearchEngine()
         self.input_guard = input_guard or InputGuardrail()
         self.output_guard = output_guard or OutputGuardrail()
-        self.nli_evaluator = nli_evaluator or LocalNLIEvaluator()
+        self.grounding_evaluator = grounding_evaluator or LexicalGroundingEvaluator()
 
         self.anthropic_client = None
         if settings.ANTHROPIC_API_KEY and settings.ANTHROPIC_API_KEY != "mock-key":
@@ -193,7 +193,7 @@ Rules:
 
     # 5. Critic & Entailment Evaluation Node
     def critic_node(self, state: AgentState) -> Dict[str, Any]:
-        """Evaluate claim entailment locally with LocalNLIEvaluator."""
+        """Evaluate claim grounding locally with LexicalGroundingEvaluator."""
         route = state.get("route", "rag")
         trace = list(state.get("execution_trace", []))
 
@@ -212,7 +212,7 @@ Rules:
         retry_count = state.get("retry_count", 0)
 
         # Run fast local NLI evaluation
-        eval_result = self.nli_evaluator.evaluate_faithfulness(answer, reranked_chunks)
+        eval_result = self.grounding_evaluator.evaluate_faithfulness(answer, reranked_chunks)
 
         trace.append(
             f"CriticNode: verdict={eval_result.verdict}, score={eval_result.faithfulness_score:.2f}, retry_count={retry_count}"

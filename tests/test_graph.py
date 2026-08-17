@@ -3,7 +3,7 @@
 import pytest
 from src.agents.graph import build_rag_graph
 from src.agents.nodes import AgentNodeRunner
-from src.evaluation.nli_evaluator import LocalNLIEvaluator, NLICritiqueResult
+from src.evaluation.nli_evaluator import LexicalGroundingEvaluator, GroundingResult
 
 
 def test_graph_safe_refusal_on_injection():
@@ -77,19 +77,19 @@ def test_graph_direct_route_execution():
 
 def test_graph_critic_self_correction_retry_loop():
     """Verify LangGraph executes the self-correction retry path when Critic fails on attempt 0."""
-    class CustomCriticEvaluator(LocalNLIEvaluator):
+    class CustomCriticEvaluator(LexicalGroundingEvaluator):
         call_count = 0
         def evaluate_faithfulness(self, answer, retrieved_chunks):
             self.call_count += 1
             # First attempt fails faithfulness gate; second attempt passes
             if self.call_count == 1:
-                return NLICritiqueResult(
+                return GroundingResult(
                     faithfulness_score=0.40,
                     verdict="FAIL",
                     ungrounded_claims=["Unverified statement."],
                     feedback="Low grounding on initial attempt."
                 )
-            return NLICritiqueResult(
+            return GroundingResult(
                 faithfulness_score=0.95,
                 verdict="PASS",
                 ungrounded_claims=[],
@@ -97,7 +97,7 @@ def test_graph_critic_self_correction_retry_loop():
             )
 
     custom_evaluator = CustomCriticEvaluator()
-    runner = AgentNodeRunner(nli_evaluator=custom_evaluator)
+    runner = AgentNodeRunner(grounding_evaluator=custom_evaluator)
     graph = build_rag_graph(node_runner=runner)
 
     initial_state = {

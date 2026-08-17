@@ -1,12 +1,11 @@
-"""Fast local NLI & semantic claim entailment evaluator for inline Critic node."""
-
+"""Fast local token-overlap grounding evaluator for inline Critic node."""
 import re
 from typing import List, Dict, Any, Tuple
 from pydantic import BaseModel, Field
 from config.settings import settings
 
 
-class NLICritiqueResult(BaseModel):
+class GroundingResult(BaseModel):
     """Result of local NLI claim entailment evaluation."""
     faithfulness_score: float
     verdict: str  # "PASS" | "FAIL"
@@ -14,9 +13,8 @@ class NLICritiqueResult(BaseModel):
     feedback: str = ""
 
 
-class LocalNLIEvaluator:
-    """Zero-API, low-latency local claim entailment evaluator for online Critic node."""
-
+class LexicalGroundingEvaluator:
+    """Zero-API, low-latency lexical grounding check for online Critic node - flags claims with low token overlap against retrieved context."""
     def __init__(self, threshold: float = settings.FAITHFULNESS_THRESHOLD):
         self.threshold = threshold
 
@@ -45,10 +43,10 @@ class LocalNLIEvaluator:
         self,
         answer: str,
         retrieved_chunks: List[Dict[str, Any]]
-    ) -> NLICritiqueResult:
+    ) -> GroundingResult:
         """Evaluate whether each claim in the answer is entailed by the retrieved context."""
         if not answer or not answer.strip():
-            return NLICritiqueResult(
+            return GroundingResult(
                 faithfulness_score=0.0,
                 verdict="FAIL",
                 ungrounded_claims=["Empty answer provided."],
@@ -56,7 +54,7 @@ class LocalNLIEvaluator:
             )
 
         if not retrieved_chunks:
-            return NLICritiqueResult(
+            return GroundingResult(
                 faithfulness_score=0.0,
                 verdict="FAIL",
                 ungrounded_claims=["No supporting context retrieved."],
@@ -90,7 +88,7 @@ class LocalNLIEvaluator:
                 f"Ungrounded claims detected: {len(ungrounded)}. Context expansion or query refinement recommended."
             )
 
-        return NLICritiqueResult(
+        return GroundingResult(
             faithfulness_score=calibrated_score,
             verdict="PASS" if passed else "FAIL",
             ungrounded_claims=ungrounded,
