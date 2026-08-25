@@ -142,14 +142,30 @@ def run_benchmark_suite(
     p90_latency = float(np.percentile(latencies_ms, 90))
     p99_latency = float(np.percentile(latencies_ms, 99))
 
+    # Per-category breakdown
+    categories = sorted(set(r["category"] for r in results))
+    category_stats = {}
+    for cat in categories:
+        cat_results = [r for r in results if r["category"] == cat]
+        category_stats[cat] = {
+            "count": len(cat_results),
+            "avg_faithfulness": float(np.mean([r["faithfulness"] for r in cat_results])),
+            "avg_recall": float(np.mean([r["context_recall"] for r in cat_results])),
+        }
+
     # 5. Generate Markdown Report
     report_content = f"""# Enterprise Agentic Hybrid RAG - LLMOps Benchmark Report
 
-Generated at: {time.strftime('%Y-%m-%d %H:%M:%S')}  
-Total Test Queries: {len(test_samples)}  
-Embedding Model: `{settings.EMBEDDING_MODEL}`  
-Reranker: `{settings.RERANKER_MODEL}`  
-LLM Provider: `{settings.OLLAMA_MODEL if settings.LLM_PROVIDER == "ollama" else settings.ANTHROPIC_MODEL}`
+Generated at: {time.strftime('%Y-%m-%d %H:%M:%S')}
+Total Test Queries: {len(test_samples)} (single run, not averaged across multiple runs)
+Source Documents: {len(list(docs_dir.glob('*.md')))} markdown files, {len(chunks)} chunks indexed
+Question Type Breakdown: {', '.join(f"{cat}={category_stats[cat]['count']}" for cat in categories)}
+Embedding Model: `{settings.EMBEDDING_MODEL}`
+Reranker: `{settings.RERANKER_MODEL}`
+Synthesis + Judge LLM: `{settings.OLLAMA_MODEL if settings.LLM_PROVIDER == "ollama" else settings.ANTHROPIC_MODEL}` (same model used for both - see Known Limitations)
+Hardware: CPU-only local inference (no GPU acceleration)
+Top-K Retrieval: `{settings.TOP_K_RETRIEVAL}`
+Faithfulness Threshold: `{settings.FAITHFULNESS_THRESHOLD}`
 
 ---
 
@@ -162,6 +178,17 @@ LLM Provider: `{settings.OLLAMA_MODEL if settings.LLM_PROVIDER == "ollama" else 
 | **Context Precision@K** | >= 0.80 | **{avg_precision:.3f}** | {'[PASS]' if avg_precision >= 0.80 else '[FAIL]'} |
 | **Context Recall** | >= 0.80 | **{avg_recall:.3f}** | {'[PASS]' if avg_recall >= 0.80 else '[FAIL]'} |
 
+---
+
+## 1b. Score Breakdown by Question Category
+
+| Category | Count | Avg Faithfulness | Avg Recall |
+| :--- | :--- | :--- | :--- |
+"""
+    for cat in categories:
+        stats = category_stats[cat]
+        report_content += f"| `{cat}` | {stats['count']} | {stats['avg_faithfulness']:.3f} | {stats['avg_recall']:.3f} |\n"
+    report_content += f"""
 ---
 
 ## 2. Latency & Throughput Profile
