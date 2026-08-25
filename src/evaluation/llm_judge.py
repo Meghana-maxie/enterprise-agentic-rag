@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 import anthropic
 from config.settings import settings
 
-# Provider‑agnostic LLM client abstractions
+# Providerâ€‘agnostic LLM client abstractions
 from src.llm.base_client import BaseLLMClient, OllamaClient, AnthropicClient
 
 class BenchmarkMetrics(BaseModel):
@@ -57,36 +57,38 @@ Score the following metrics on a continuous scale from 0.00 to 1.00:
 3. Context Precision: Are the retrieved contexts relevant and focused on answering the query?
 4. Context Recall: Do the retrieved contexts contain all facts needed to match the ground truth?
 
-Output ONLY a valid JSON object in this exact schema:
+Output ONLY a single valid JSON object in this exact schema, with each field appearing EXACTLY ONCE. The values below are placeholder types, NOT the answer â€” compute your own score for THIS specific query/answer/context. Keep "reasoning" to ONE short sentence, no more than 20 words:
 {{
-  "faithfulness": 0.95,
-  "answer_relevance": 0.90,
-  "context_precision": 0.85,
-  "context_recall": 0.92,
-  "reasoning": "Concise 1-2 sentence justification"
+  "faithfulness": <your computed float between 0.0 and 1.0>,
+  "answer_relevance": <your computed float between 0.0 and 1.0>,
+  "context_precision": <your computed float between 0.0 and 1.0>,
+  "context_recall": <your computed float between 0.0 and 1.0>,
+  "reasoning": "<one short sentence, max 20 words>"
 }}"""
 
-        try:
-            raw_text = self.client.generate(
-                system_prompt="You are an objective evaluation evaluator. Return only JSON.",
-                user_prompt=prompt,
-                max_tokens=500
-            )
-            print(f"=== RAW OLLAMA OUTPUT ===\n{raw_text}\n=========================")
-            json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
-            if json_match:
-                data = json.loads(json_match.group(0))
-                return BenchmarkMetrics(
-                    faithfulness=float(data.get("faithfulness", 0.8)),
-                    answer_relevance=float(data.get("answer_relevance", 0.8)),
-                    context_precision=float(data.get("context_precision", 0.8)),
-                    context_recall=float(data.get("context_recall", 0.8)),
-                    reasoning=data.get("reasoning", "")
+        for attempt in range(2):
+            try:
+                raw_text = self.client.generate(
+                    system_prompt="You are an objective evaluation evaluator. Return only JSON.",
+                    user_prompt=prompt,
+                    max_tokens=800
                 )
-            raise ValueError(f"No JSON object found in model response: {raw_text}")
-        except Exception as e:
-            print(f"LLM judge evaluation failed: {e}")
-            raise
+                print(f"=== RAW OLLAMA OUTPUT ===\n{raw_text}\n=========================")
+                json_match = re.search(r"\{.*\}", raw_text, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group(0))
+                    return BenchmarkMetrics(
+                        faithfulness=float(data.get("faithfulness", 0.8)),
+                        answer_relevance=float(data.get("answer_relevance", 0.8)),
+                        context_precision=float(data.get("context_precision", 0.8)),
+                        context_recall=float(data.get("context_recall", 0.8)),
+                        reasoning=data.get("reasoning", "")
+                    )
+                raise ValueError(f"No JSON object found in model response: {raw_text}")
+            except Exception as e:
+                print(f"LLM judge evaluation attempt {attempt + 1} failed: {e}")
+                if attempt == 1:
+                    raise
 
 
     @staticmethod

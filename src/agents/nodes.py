@@ -1,4 +1,4 @@
-﻿"""LangGraph node definitions for enterprise agentic RAG pipeline."""
+"""LangGraph node definitions for enterprise agentic RAG pipeline."""
 
 import re
 import json
@@ -41,7 +41,7 @@ class AgentNodeRunner:
                 self.anthropic_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
             except Exception:
                 self.anthropic_client = None
-        # Providerâ€‘agnostic client (default Ollama)
+        # ProviderÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Ëœagnostic client (default Ollama)
         if settings.LLM_PROVIDER == "ollama":
             self.llm_client: BaseLLMClient = OllamaClient()
         elif settings.LLM_PROVIDER == "anthropic":
@@ -211,6 +211,10 @@ Rules:
                 "synthesis_error": str(e),
                 "execution_trace": trace,
             }
+        # Strip leading prompt-echo artifacts (small models sometimes echo the "[ANSWER]:" cue)
+        synthesized_text = synthesized_text.strip()
+        synthesized_text = re.sub(r"^\[ANSWER\]:?\s*", "", synthesized_text)
+
         trace.append(f"SynthesisNode: synthesized answer ({len(synthesized_text)} chars)")
 
         return {
@@ -240,7 +244,7 @@ Rules:
             return {
                 "faithfulness_score": 0.0,
                 "critic_verdict": "FAIL",
-                "critic_feedback": "Synthesis failed upstream — no answer was generated to evaluate.",
+                "critic_feedback": "Synthesis failed upstream Ã¢â‚¬â€ no answer was generated to evaluate.",
                 "retry_count": state.get("retry_count", 0),
                 "execution_trace": trace,
             }

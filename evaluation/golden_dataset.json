@@ -1,6 +1,7 @@
 [
   {
     "id": "eval_001",
+    "category": "direct_lookup",
     "query": "What are the three primary active-active cloud regions and their SLA uptime requirement?",
     "ground_truth": "The platform operates across us-east-1 (North Virginia), eu-west-1 (Ireland), and ap-southeast-1 (Singapore) with an SLA of 99.99% uptime and max 52.56 minutes annualized downtime.",
     "target_doc": "cloud_architecture.md",
@@ -9,6 +10,7 @@
   },
   {
     "id": "eval_002",
+    "category": "direct_lookup",
     "query": "What are the latency budgets for the internal API Gateway Router and Vector Database engine?",
     "ground_truth": "The internal API Gateway Router has a 15ms p99 latency budget, and the Vector Database Query Engine has a 30ms p95 latency budget.",
     "target_doc": "cloud_architecture.md",
@@ -17,6 +19,7 @@
   },
   {
     "id": "eval_003",
+    "category": "direct_lookup",
     "query": "What are the exact RTO and RPO targets during a total regional outage?",
     "ground_truth": "Recovery Time Objective (RTO) is 2 minutes, and Recovery Point Objective (RPO) is 0 seconds via synchronous multi-region CockroachDB replication.",
     "target_doc": "cloud_architecture.md",
@@ -25,6 +28,7 @@
   },
   {
     "id": "eval_004",
+    "category": "direct_lookup",
     "query": "How often are vector index backups taken and where are they stored?",
     "ground_truth": "Vector indexes are snapshotted every 4 hours to Amazon S3 Glacier Flexible Retrieval with a 30-day retention lock.",
     "target_doc": "cloud_architecture.md",
@@ -33,6 +37,7 @@
   },
   {
     "id": "eval_005",
+    "category": "direct_lookup",
     "query": "What encryption standard is required for data at rest and how frequently are KMS keys rotated?",
     "ground_truth": "Data at rest must be encrypted using AES-256 with customer-managed keys (CMK) rotated automatically every 90 days via AWS KMS.",
     "target_doc": "security_compliance.md",
@@ -41,6 +46,7 @@
   },
   {
     "id": "eval_006",
+    "category": "direct_lookup",
     "query": "What is the maximum time-to-live (TTL) for service account IAM OIDC tokens?",
     "ground_truth": "Service accounts use short-lived IAM OIDC tokens with a maximum TTL of 1 hour.",
     "target_doc": "security_compliance.md",
@@ -49,6 +55,7 @@
   },
   {
     "id": "eval_007",
+    "category": "direct_lookup",
     "query": "What is the data retention schedule for API request logs in hot S3 vs Glacier Deep Archive?",
     "ground_truth": "API request logs are retained in hot S3 storage for 90 days, then moved to S3 Glacier Deep Archive for 7 years.",
     "target_doc": "security_compliance.md",
@@ -57,10 +64,103 @@
   },
   {
     "id": "eval_008",
+    "category": "direct_lookup",
     "query": "What is the remediation SLA for critical severity vulnerabilities with CVSS 9.0-10.0?",
     "ground_truth": "Critical severity vulnerabilities must be mitigated and patched within 24 hours of discovery.",
     "target_doc": "security_compliance.md",
     "target_page": 1,
     "context_reference": "Critical severity vulnerabilities (CVSS score 9.0 - 10.0) must be mitigated and patched within 24 hours of discovery."
+  },
+  {
+    "id": "eval_009",
+    "category": "paraphrased",
+    "query": "Which regions is the platform live in simultaneously, and what's the yearly downtime cap needed to hit the uptime target?",
+    "ground_truth": "The platform operates across us-east-1 (North Virginia), eu-west-1 (Ireland), and ap-southeast-1 (Singapore) with an SLA of 99.99% uptime and max 52.56 minutes annualized downtime.",
+    "target_doc": "cloud_architecture.md",
+    "target_page": 1,
+    "context_reference": "The Global Cloud Platform operates across three primary active-active regions: us-east-1 (North Virginia), eu-west-1 (Ireland), and ap-southeast-1 (Singapore). All tier-1 core microservices require a minimum service level agreement (SLA) of 99.99% uptime with an annualized unplanned downtime budget not exceeding 52.56 minutes."
+  },
+  {
+    "id": "eval_010",
+    "category": "paraphrased",
+    "query": "How is data protected while it's sitting in storage, and on what schedule do the keys protecting it get swapped out?",
+    "ground_truth": "Data at rest must be encrypted using AES-256 with customer-managed keys (CMK) rotated automatically every 90 days via AWS KMS.",
+    "target_doc": "security_compliance.md",
+    "target_page": 1,
+    "context_reference": "Data at rest across all persistent storage volumes (EBS, S3, Qdrant Vector DB, RDS) must be encrypted using AES-256 with customer-managed keys (CMK) rotated automatically every 90 days via AWS KMS."
+  },
+  {
+    "id": "eval_011",
+    "category": "multi_hop",
+    "query": "If a customer tenant's account is deleted, how quickly must their vector embeddings be removed, and what database technology stores those vectors in the first place?",
+    "ground_truth": "Vector database embedding records belonging to deleted customer tenants are hard-deleted within 24 hours. Vectors are stored in Qdrant Vector DB.",
+    "target_doc": "security_compliance.md",
+    "target_page": 1,
+    "context_reference": "Vector database embedding records belonging to deleted customer tenants are hard-deleted within 24 hours. [cross-reference: security_compliance.md Section 1 names Qdrant Vector DB as one of the encrypted persistent storage volumes]"
+  },
+  {
+    "id": "eval_012",
+    "category": "multi_hop",
+    "query": "How does the 2-minute RTO for a full regional outage compare to the patching deadline for a critical severity vulnerability?",
+    "ground_truth": "The Recovery Time Objective (RTO) for a total regional outage is 2 minutes. Critical severity vulnerabilities (CVSS 9.0-10.0) must be patched within 24 hours of discovery a much longer window than the RTO.",
+    "target_doc": "cloud_architecture.md",
+    "target_page": 1,
+    "context_reference": "cloud_architecture.md Section 3: RTO is 2 minutes. security_compliance.md Section 4: Critical severity vulnerabilities must be mitigated and patched within 24 hours of discovery."
+  },
+  {
+    "id": "eval_013",
+    "category": "distractor_heavy",
+    "query": "Specifically, what is the p99 latency budget for the Service-to-Service gRPC Mesh (Envoy), not the API Gateway or edge termination?",
+    "ground_truth": "The Service-to-Service gRPC Mesh (Envoy) has a 5ms p99 latency budget.",
+    "target_doc": "cloud_architecture.md",
+    "target_page": 1,
+    "context_reference": "Service-to-Service gRPC Mesh (Envoy): 5ms p99 latency."
+  },
+  {
+    "id": "eval_014",
+    "category": "distractor_heavy",
+    "query": "What is the remediation deadline specifically for High severity vulnerabilities (CVSS 7.0-8.9), as distinct from Critical severity ones?",
+    "ground_truth": "High severity vulnerabilities (CVSS 7.0-8.9) have a mandatory remediation SLA of 7 calendar days.",
+    "target_doc": "security_compliance.md",
+    "target_page": 1,
+    "context_reference": "High severity vulnerabilities (CVSS 7.0 - 8.9) have a mandatory remediation SLA of 7 calendar days."
+  },
+  {
+    "id": "eval_015",
+    "category": "unanswerable",
+    "query": "What is the required SLA uptime percentage for tier-2 and tier-3 microservices?",
+    "ground_truth": "This information is not available in the enterprise knowledge base. The documents only specify an SLA for tier-1 core microservices (99.99% uptime); tier-2 and tier-3 SLAs are not defined.",
+    "target_doc": null,
+    "target_page": null,
+    "context_reference": null,
+    "unanswerable": true
+  },
+  {
+    "id": "eval_016",
+    "category": "unanswerable",
+    "query": "How many employees are required to complete SOC-2 compliance training each year?",
+    "ground_truth": "This information is not available in the enterprise knowledge base. The documents mention that SOC-2 Type II audits occur annually in Q3, but do not specify employee training requirements or headcounts.",
+    "target_doc": null,
+    "target_page": null,
+    "context_reference": null,
+    "unanswerable": true
+  },
+  {
+    "id": "eval_017",
+    "category": "adversarial_citation_stress",
+    "query": "According to the cloud architecture document, how often are third-party SOC-2 Type II audits conducted?",
+    "ground_truth": "This is a trick question: the SOC-2 audit cadence is not in cloud_architecture.md. It is stated in security_compliance.md automated penetration tests and third-party SOC-2 Type II audits are conducted annually in Q3. The correct answer must cite security_compliance.md, not cloud_architecture.md.",
+    "target_doc": "security_compliance.md",
+    "target_page": 1,
+    "context_reference": "Automated penetration tests and third-party SOC-2 Type II audits are conducted annually in Q3."
+  },
+  {
+    "id": "eval_018",
+    "category": "adversarial_citation_stress",
+    "query": "Per the security compliance policy, what AWS EKS Kubernetes version and instance type do the autoscaling worker clusters run on?",
+    "ground_truth": "This is a trick question: Kubernetes/EKS and instance type details are not in security_compliance.md. They are stated in cloud_architecture.md worker clusters run on Kubernetes (EKS v1.30) with Karpenter autoscaling nodes configured for AMD EPYC c6a.4xlarge compute instances. The correct answer must cite cloud_architecture.md, not security_compliance.md.",
+    "target_doc": "cloud_architecture.md",
+    "target_page": 1,
+    "context_reference": "Worker clusters run on Kubernetes (EKS v1.30) with Karpenter autoscaling nodes configured for AMD EPYC c6a.4xlarge compute instances."
   }
 ]

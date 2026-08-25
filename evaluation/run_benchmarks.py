@@ -89,21 +89,42 @@ def run_benchmark_suite(
         gen_answer = final_state.get("synthesized_answer", "")
         retrieved_contexts = [c.get("content", "") for c in final_state.get("reranked_chunks", [])]
 
-        # LLM-as-a-judge scoring
-        metrics: BenchmarkMetrics = judge.evaluate_sample(
-            query=query,
-            retrieved_contexts=retrieved_contexts,
-            generated_answer=gen_answer,
-            ground_truth=ground_truth
-        )
+               # LLM-as-a-judge scoring
+        try:
+            metrics: BenchmarkMetrics = judge.evaluate_sample(
+                query=query,
+                retrieved_contexts=retrieved_contexts,
+                generated_answer=gen_answer,
+                ground_truth=ground_truth
+            )
+        except Exception as e:
+            print(f"  [{idx:02d}/{len(test_samples):02d}] JUDGE FAILED for '{sample['id']}': {e}")
+            results.append({
+                "id": sample["id"],
+                "query": query,
+                "category": sample.get("category", "uncategorized"),
+                "generated_answer": gen_answer,
+                "faithfulness": 0.0,
+                "answer_relevance": 0.0,
+                "context_precision": 0.0,
+                "context_recall": 0.0,
+                "reasoning": f"JUDGE FAILED: {e}",
+                "latency_ms": elapsed_ms,
+                "citations_count": len(final_state.get("verified_citations", [])),
+                "critic_verdict": final_state.get("critic_verdict", "PASS"),
+            })
+            continue
 
         results.append({
             "id": sample["id"],
             "query": query,
+            "category": sample.get("category", "uncategorized"),
+            "generated_answer": gen_answer,
             "faithfulness": metrics.faithfulness,
             "answer_relevance": metrics.answer_relevance,
             "context_precision": metrics.context_precision,
             "context_recall": metrics.context_recall,
+            "reasoning": metrics.reasoning,
             "latency_ms": elapsed_ms,
             "citations_count": len(final_state.get("verified_citations", [])),
             "critic_verdict": final_state.get("critic_verdict", "PASS"),
@@ -160,6 +181,13 @@ LLM Provider: `{settings.OLLAMA_MODEL if settings.LLM_PROVIDER == "ollama" else 
 """
     for r in results:
         report_content += f"| `{r['id']}` | {r['query'][:40]}... | `{r['faithfulness']:.2f}` | `{r['context_precision']:.2f}` | `{r['context_recall']:.2f}` | {r['latency_ms']:.0f}ms | {r['critic_verdict']} |\n"
+
+    report_content += "\n---\n\n## 4. Per-Query Reasoning (Judge Commentary)\n\n"
+    for r in results:
+        report_content += f"**`{r['id']}`** ({r.get('category', 'uncategorized')}) - F:{r['faithfulness']:.2f} R:{r['context_recall']:.2f}\n"
+        report_content += f"- Query: {r['query']}\n"
+        report_content += f"- Answer: {r.get('generated_answer', '')[:200]}\n"
+        report_content += f"- Judge reasoning: {r.get('reasoning', '')}\n\n"
 
     report_output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(report_output_path, "w", encoding="utf-8") as f:
