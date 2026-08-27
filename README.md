@@ -89,7 +89,7 @@ flowchart TD
 > - **Built a multi-stage agentic RAG system using LangGraph cyclic state machines, Qdrant vector store, and BM25 lexical search combined via Reciprocal Rank Fusion (RRF, $k=60$).**
 > - **Integrated a local ONNX cross-encoder reranker (FlashRank ms-marco-MiniLM-L-12-v2, ~42 ms mean per query) and sub-15ms local lexical grounding critic node to self-correct under-grounded answers with a bounded single-retry loop.**
 > - **Implemented 2-stage deterministic guardrails for regex-based PII redaction (SSN, email, phone, API keys), prompt injection detection, and post-synthesis citation integrity validation against source chunk IDs.**
-> - **Developed an automated LLMOps evaluation pipeline benchmarking Faithfulness (0.92), Context Precision (0.88), and latency percentiles (P50: 420ms) using Claude LLM-as-a-Judge over synthetic golden datasets.**
+> - **Developed an automated LLMOps evaluation pipeline with a decoupled unanswerable-question refusal metric (100% accuracy) and per-category scoring, benchmarking Faithfulness, Context Precision, and latency percentiles over an 18-question golden dataset using a local LLM-as-a-Judge.**
 
 ---
 
@@ -99,12 +99,13 @@ Evaluated over the curated `evaluation/golden_dataset.json` test suite:
 
 | Metric | Target | Achieved Score | Evaluation Method |
 | :--- | :--- | :--- | :--- |
-| **Faithfulness (Groundedness)** | $\ge 0.85$ | **0.924** | Claude LLM-as-a-Judge |
-| **Answer Relevance** | $\ge 0.80$ | **0.910** | Claude LLM-as-a-Judge |
-| **Context Precision@K** | $\ge 0.80$ | **0.885** | Reciprocal Rank / NDCG |
-| **Context Recall** | $\ge 0.80$ | **0.892** | Ground Truth Match |
-| **P50 Latency** | $< 800\text{ms}$ | **420 ms** | End-to-End Pipeline |
-| **P90 Latency** | $< 1500\text{ms}$ | **890 ms** | End-to-End Pipeline |
+| **Faithfulness (Groundedness)** | $\ge 0.85$ | **0.597** | Local LLM-as-a-Judge (llama3.2:3b) |
+| **Answer Relevance** | $\ge 0.80$ | **0.791** | Local LLM-as-a-Judge (llama3.2:3b) |
+| **Context Precision@K** | $\ge 0.80$ | **0.722** | Reciprocal Rank / NDCG |
+| **Context Recall** | $\ge 0.80$ | **0.558** | Ground Truth Match |
+| **Refusal Accuracy** | 100% | **1.000** | Unanswerable-question refusal detection |
+| **P50 Latency** | $< 800\text{ms}$ | **40,798 ms** | End-to-End Pipeline (CPU-only, llama3.2:3b) |
+| **P90 Latency** | $< 1500\text{ms}$ | **54,244 ms** | End-to-End Pipeline (CPU-only, llama3.2:3b) |
 
 ---
 
