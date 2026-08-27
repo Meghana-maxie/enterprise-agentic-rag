@@ -113,7 +113,7 @@ Evaluated over the curated `evaluation/golden_dataset.json` test suite:
 ### 1. Prerequisites & Environment Setup
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/enterprise-agentic-rag.git
+git clone https://github.com/Meghana-maxie/enterprise-agentic-rag.git
 cd enterprise-agentic-rag
 
 # Create and activate virtual environment
