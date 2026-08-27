@@ -6,7 +6,7 @@ from config.settings import settings
 
 
 class GroundingResult(BaseModel):
-    """Result of local NLI claim entailment evaluation."""
+    """Result of local lexical grounding evaluation."""
     faithfulness_score: float
     verdict: str  # "PASS" | "FAIL"
     ungrounded_claims: List[str] = Field(default_factory=list)
