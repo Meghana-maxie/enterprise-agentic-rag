@@ -89,7 +89,28 @@ def run_benchmark_suite(
         gen_answer = final_state.get("synthesized_answer", "")
         retrieved_contexts = [c.get("content", "") for c in final_state.get("reranked_chunks", [])]
 
-               # LLM-as-a-judge scoring
+        if sample.get("unanswerable", False):
+            refusal_phrases = ["not available", "unavailable", "does not contain", "not explicitly stated", "not mentioned", "no information", "not covered"]
+            answer_lower = gen_answer.lower()
+            correctly_refused = any(phrase in answer_lower for phrase in refusal_phrases)
+            results.append({
+                "id": sample["id"],
+                "query": query,
+                "category": sample.get("category", "uncategorized"),
+                "generated_answer": gen_answer,
+                "faithfulness": 1.0 if correctly_refused else 0.0,
+                "answer_relevance": 1.0 if correctly_refused else 0.0,
+                "context_precision": 1.0 if correctly_refused else 0.0,
+                "context_recall": 1.0 if correctly_refused else 0.0,
+                "reasoning": "Correctly declined to answer (refusal detected)." if correctly_refused else "Should have declined but did not (no refusal language detected) - possible hallucination.",
+                "latency_ms": elapsed_ms,
+                "citations_count": len(final_state.get("verified_citations", [])),
+                "critic_verdict": final_state.get("critic_verdict", "PASS"),
+            })
+            print(f"  [{idx:02d}/{len(test_samples):02d}] '{query[:40]}...' -> Unanswerable check: {'PASS' if correctly_refused else 'FAIL'} | {elapsed_ms:.1f}ms")
+            continue
+
+        # LLM-as-a-judge scoring
         try:
             metrics: BenchmarkMetrics = judge.evaluate_sample(
                 query=query,
