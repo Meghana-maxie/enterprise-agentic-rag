@@ -10,7 +10,15 @@ An enterprise-grade, multi-stage agentic Retrieval-Augmented Generation (RAG) sy
 
 ---
 
-## 🏗️ System Architecture
+What This Actually Does
+
+In plain terms: this is a Q&A system for internal company documents. You ask a question in natural language ("what's our data retention policy for logs?"), and instead of guessing or making something up, it searches the actual policy documents, finds the relevant passages, and writes an answer that cites exactly where each fact came from - similar to how Perplexity or ChatGPT's browsing mode cites sources, but running entirely on your own private documents instead of the public web.
+
+Under the hood it combines two different search techniques (keyword matching and semantic/meaning-based search) to find relevant passages, double-checks that the generated answer is actually backed up by those passages before showing it to you, and automatically declines to answer if the information genuinely isn't in the knowledge base rather than inventing something plausible-sounding. It also includes an automated testing suite that scores the system's accuracy against a set of known-answer questions, including deliberately tricky ones designed to catch citation mistakes and hallucinations.
+
+---
+
+## System Architecture
 
 ```mermaid
 flowchart TD
