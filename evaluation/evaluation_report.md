@@ -1,9 +1,11 @@
 # Enterprise Agentic Hybrid RAG - LLMOps Benchmark Report
 
-Generated at: 2026-08-27 13:13:54
+Generated at: 2026-08-27 22:28:47
 Total Test Queries: 18 (single run, not averaged across multiple runs)
 Source Documents: 2 markdown files, 10 chunks indexed
 Question Type Breakdown: adversarial_citation_stress=2, direct_lookup=8, distractor_heavy=2, multi_hop=2, paraphrased=2, unanswerable=2
+Answerable Questions: 16
+Unanswerable Questions: 2
 Embedding Model: `BAAI/bge-small-en-v1.5`
 Reranker: `ms-marco-MiniLM-L-12-v2`
 Synthesis + Judge LLM: `llama3.2:3b` (same model used for both - see Known Limitations)
@@ -17,23 +19,24 @@ Faithfulness Threshold: `0.85`
 
 | Evaluation Metric | Target Threshold | Achieved Score | Status |
 | :--- | :--- | :--- | :--- |
-| **Faithfulness (Groundedness)** | >= 0.85 | **0.542** | [FAIL] |
-| **Answer Relevance** | >= 0.80 | **0.789** | [FAIL] |
-| **Context Precision@K** | >= 0.80 | **0.628** | [FAIL] |
-| **Context Recall** | >= 0.80 | **0.531** | [FAIL] |
+| **Faithfulness (Groundedness)** | >= 0.85 | **0.588** | [FAIL] |
+| **Answer Relevance** | >= 0.80 | **0.726** | [FAIL] |
+| **Context Precision@K** | >= 0.80 | **0.601** | [FAIL] |
+| **Context Recall** | >= 0.80 | **0.457** | [FAIL] |
+| **Refusal Accuracy** | 100% | **0.500** | [FAIL] |
 
 ---
 
 ## 1b. Score Breakdown by Question Category
 
-| Category | Count | Avg Faithfulness | Avg Recall |
-| :--- | :--- | :--- | :--- |
-| `adversarial_citation_stress` | 2 | 0.200 | 0.100 |
-| `direct_lookup` | 8 | 0.604 | 0.519 |
-| `distractor_heavy` | 2 | 0.300 | 0.350 |
-| `multi_hop` | 2 | 0.365 | 0.400 |
-| `paraphrased` | 2 | 0.600 | 0.850 |
-| `unanswerable` | 2 | 1.000 | 1.000 |
+| Category | Count | Answerable | Unanswerable | Avg Faithfulness | Avg Recall | Refusal Accuracy |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `adversarial_citation_stress` | 2 | 2 | 0 | 0.125 | 0.250 | N/A |
+| `direct_lookup` | 8 | 8 | 0 | 0.664 | 0.520 | N/A |
+| `distractor_heavy` | 2 | 2 | 0 | 0.775 | 0.500 | N/A |
+| `multi_hop` | 2 | 2 | 0 | 0.335 | 0.000 | N/A |
+| `paraphrased` | 2 | 2 | 0 | 0.815 | 0.825 | N/A |
+| `unanswerable` | 2 | 0 | 2 | N/A | N/A | 0.500 |
 
 ---
 
@@ -41,9 +44,9 @@ Faithfulness Threshold: `0.85`
 
 | Percentile | Latency (ms) |
 | :--- | :--- |
-| **P50 (Median)** | **25890.4 ms** |
-| **P90** | **48550.4 ms** |
-| **P99** | **53567.6 ms** |
+| **P50 (Median)** | **21130.0 ms** |
+| **P90** | **38024.4 ms** |
+| **P99** | **44686.1 ms** |
 
 ---
 
@@ -51,136 +54,133 @@ Faithfulness Threshold: `0.85`
 
 | ID | Query | Faithfulness | Precision | Recall | Latency | Critic |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `eval_001` | What are the three primary active-active... | `0.83` | `0.78` | `0.67` | 23704ms | PASS |
-| `eval_002` | What are the latency budgets for the int... | `0.50` | `0.90` | `0.60` | 22579ms | PASS |
-| `eval_003` | What are the exact RTO and RPO targets d... | `0.67` | `0.80` | `0.93` | 21935ms | PASS |
-| `eval_004` | How often are vector index backups taken... | `0.50` | `0.25` | `0.00` | 36231ms | FAIL |
-| `eval_005` | What encryption standard is required for... | `0.50` | `0.90` | `0.70` | 51549ms | PASS |
-| `eval_006` | What is the maximum time-to-live (TTL) f... | `0.67` | `0.80` | `0.50` | 22235ms | PASS |
-| `eval_007` | What is the data retention schedule for ... | `0.50` | `0.25` | `0.25` | 22058ms | PASS |
-| `eval_008` | What is the remediation SLA for critical... | `0.66` | `0.72` | `0.50` | 20888ms | PASS |
-| `eval_009` | Which regions is the platform live in si... | `0.80` | `0.70` | `0.90` | 24361ms | PASS |
-| `eval_010` | How is data protected while it's sitting... | `0.40` | `0.80` | `0.80` | 47265ms | FAIL |
-| `eval_011` | If a customer tenant's account is delete... | `0.33` | `0.00` | `0.00` | 43523ms | FAIL |
-| `eval_012` | How does the 2-minute RTO for a full reg... | `0.40` | `0.80` | `0.80` | 53981ms | FAIL |
-| `eval_013` | Specifically, what is the p99 latency bu... | `0.00` | `0.00` | `0.00` | 20959ms | PASS |
-| `eval_014` | What is the remediation deadline specifi... | `0.60` | `0.80` | `0.70` | 27420ms | PASS |
-| `eval_015` | What is the required SLA uptime percenta... | `1.00` | `1.00` | `1.00` | 46614ms | FAIL |
-| `eval_016` | How many employees are required to compl... | `1.00` | `1.00` | `1.00` | 37522ms | FAIL |
-| `eval_017` | According to the cloud architecture docu... | `0.00` | `0.00` | `0.00` | 19722ms | PASS |
-| `eval_018` | Per the security compliance policy, what... | `0.40` | `0.80` | `0.20` | 44873ms | FAIL |
+| `eval_001` | What are the three primary active-active... | `0.83` | `0.81` | `0.91` | 30368ms | PASS |
+| `eval_002` | What are the latency budgets for the int... | `0.50` | `0.80` | `0.80` | 16115ms | PASS |
+| `eval_003` | What are the exact RTO and RPO targets d... | `0.80` | `0.70` | `0.40` | 18863ms | PASS |
+| `eval_004` | How often are vector index backups taken... | `0.80` | `0.70` | `0.95` | 31105ms | FAIL |
+| `eval_005` | What encryption standard is required for... | `0.40` | `0.60` | `0.00` | 18392ms | PASS |
+| `eval_006` | What is the maximum time-to-live (TTL) f... | `0.40` | `0.20` | `0.60` | 16465ms | PASS |
+| `eval_007` | What is the data retention schedule for ... | `0.75` | `0.80` | `0.50` | 20018ms | PASS |
+| `eval_008` | What is the remediation SLA for critical... | `0.83` | `0.50` | `0.00` | 18693ms | PASS |
+| `eval_009` | Which regions is the platform live in si... | `0.83` | `0.95` | `0.90` | 24329ms | PASS |
+| `eval_010` | How is data protected while it's sitting... | `0.80` | `0.95` | `0.75` | 45761ms | FAIL |
+| `eval_011` | If a customer tenant's account is delete... | `0.67` | `0.50` | `0.00` | 37184ms | PASS |
+| `eval_012` | How does the 2-minute RTO for a full reg... | `0.00` | `0.00` | `0.00` | 37419ms | FAIL |
+| `eval_013` | Specifically, what is the p99 latency bu... | `0.80` | `0.40` | `0.50` | 19778ms | PASS |
+| `eval_014` | What is the remediation deadline specifi... | `0.75` | `0.95` | `0.50` | 17463ms | PASS |
+| `eval_015` | What is the required SLA uptime percenta... | `N/A` | `N/A` | `N/A` | 39438ms | FAIL |
+| `eval_016` | How many employees are required to compl... | `N/A` | `N/A` | `N/A` | 32230ms | FAIL |
+| `eval_017` | According to the cloud architecture docu... | `0.00` | `0.00` | `0.00` | 17523ms | PASS |
+| `eval_018` | Per the security compliance policy, what... | `0.25` | `0.75` | `0.50` | 22242ms | PASS |
 
 ---
 
 ## 4. Per-Query Reasoning (Judge Commentary)
 
-**`eval_001`** (direct_lookup) - F:0.83 R:0.67
+**`eval_001`** (direct_lookup) - F:0.83 R:0.91
 - Query: What are the three primary active-active cloud regions and their SLA uptime requirement?
-- Answer: The three primary active-active cloud regions for the Global Cloud Platform are:
+- Answer: The three primary active-active cloud regions and their SLA uptime requirement are as follows:
 
-1. `us-east-1` (North Virginia)
-2. `eu-west-1` (Ireland)
-3. `ap-southeast-1` (Singapore)
+1.  **us-east-1** (North Virginia):
+    The SLA uptime requirement is 99.99% with an annualized unplann
+- Judge reasoning: Most claims supported, but SLA details might be slightly condensed.
 
-Their SLA uptime requirement
-- Judge reasoning: Most claims in the answer are supported, but some context is missing for precision and recall.
-
-**`eval_002`** (direct_lookup) - F:0.50 R:0.60
+**`eval_002`** (direct_lookup) - F:0.50 R:0.80
 - Query: What are the latency budgets for the internal API Gateway Router and Vector Database engine?
-- Answer: The latency budgets for the internal API Gateway Router and Vector Database engine are as follows:
+- Answer: Based on the provided context, the latency budgets for the internal API Gateway Router and Vector Database engine are as follows:
+
 - Internal API Gateway Router: 15ms p99 latency
-- Vector Database Query Engine: 30ms p95 latency
+- Vector Database Que
+- Judge reasoning: Most claims in answer supported by contexts, but not all.
 
-Not
-- Judge reasoning: Retrieved contexts are mostly relevant and faithful, but contain some irrelevant information.
-
-**`eval_003`** (direct_lookup) - F:0.67 R:0.93
+**`eval_003`** (direct_lookup) - F:0.80 R:0.40
 - Query: What are the exact RTO and RPO targets during a total regional outage?
 - Answer: The exact RTO and RPO targets during a total regional outage are as follows:
-- Recovery Time Objective (RTO): 2 minutes [cloud_architecture.md:1]
-- Recovery Point Objective (RPO): 0 seconds for transa
-- Judge reasoning: Most claims supported, but some minor contextual oversights exist.
 
-**`eval_004`** (direct_lookup) - F:0.50 R:0.00
+- Recovery Time Objective (RTO): 2 minutes, as stated in [cloud_architecture.md, Page: 1].
+- Recovery Point Objective (RPO
+- Judge reasoning: Most claims supported by contexts, but not all.
+
+**`eval_004`** (direct_lookup) - F:0.80 R:0.95
 - Query: How often are vector index backups taken and where are they stored?
-- Answer: Vector index backups are taken every 4 hours, as specified in the asynchronous backups of vector indexes, which are snapshotted in Amazon S3 Glacier Flexible Retrieval [cloud_architecture.md:1]. 
+- Answer: Vector index backups are taken asynchronously and snapshotted every 4 hours to Amazon S3 Glacier Flexible Retrieval, with a 30-day retention lock, as stated in the cloud architecture documentation [cl
+- Judge reasoning: Most claims in the answer are partially supported by the contexts, lacking detail on 'asynchronous' aspect.
 
-Unf
-- Judge reasoning: Context lacks specific storage location for vector index backups, reducing faithfulness.
-
-**`eval_005`** (direct_lookup) - F:0.50 R:0.70
+**`eval_005`** (direct_lookup) - F:0.40 R:0.00
 - Query: What encryption standard is required for data at rest and how frequently are KMS keys rotated?
-- Answer: **Encryption Standard for Data at Rest**
+- Answer: The encryption standard required for data at rest is AES-256 with customer-managed keys (CMK) [security_compliance.md:1].
 
-According to the Enterprise Security, Compliance & Data Governance Policy, data at rest across all persistent storage volumes (EBS, S3, Qdrant Vector DB, RDS)
-- Judge reasoning: The answer partially aligns with the context, missing specific policy details
+KMS keys are rotated automatically every 90 days via AWS KMS [security_compl
+- Judge reasoning: Generated answer partially supports ground truth, lacking context on data encryption standards.
 
-**`eval_006`** (direct_lookup) - F:0.67 R:0.50
+**`eval_006`** (direct_lookup) - F:0.40 R:0.60
 - Query: What is the maximum time-to-live (TTL) for service account IAM OIDC tokens?
-- Answer: The maximum time-to-live (TTL) for service account IAM OIDC tokens is 1 hour, as stated in the security compliance policy [security_compliance.md:1].
-- Judge reasoning: Generated answer partially aligns with retrieved context on TTL for IAM OIDC tokens.
+- Answer: The maximum time-to-live (TTL) for service account IAM OIDC tokens is 1 hour, as stated in [security_compliance.md, Page: 1].
+- Judge reasoning: Contexts support most claims, but lack direct connection to user query.
 
-**`eval_007`** (direct_lookup) - F:0.50 R:0.25
+**`eval_007`** (direct_lookup) - F:0.75 R:0.50
 - Query: What is the data retention schedule for API request logs in hot S3 vs Glacier Deep Archive?
-- Answer: API request logs in hot S3 are retained for 90 days [security_compliance.md:1]. After this period, they are automatically transitioned to S3 Glacier Deep Archive for 7 years [security_compliance.md:1]
-- Judge reasoning: Only part of the claim is strictly supported by the retrieved contexts
+- Answer: The data retention schedule for API request logs in hot S3 is 90 days, followed by automated transition to S3 Glacier Deep Archive for 7 years. [security_compliance.md:3]
 
-**`eval_008`** (direct_lookup) - F:0.66 R:0.50
+In contrast, asynchronous ba
+- Judge reasoning: The generated answer mostly aligns with retrieved contexts, but lacks specific Glacier Deep Archive details
+
+**`eval_008`** (direct_lookup) - F:0.83 R:0.00
 - Query: What is the remediation SLA for critical severity vulnerabilities with CVSS 9.0-10.0?
-- Answer: According to [security_compliance.md:1], the remediation SLA for critical severity vulnerabilities with CVSS 9.0-10.0 is within 24 hours of discovery.
-- Judge reasoning: The answer is mostly faithful, but lacks direct context for critical severity vulnerabilities.
+- Answer: Critical severity vulnerabilities (CVSS score 9.0 - 10.0) must be mitigated and patched within 24 hours of discovery, as per the security compliance requirements [security_compliance.md:1].
+- Judge reasoning: Contexts lack supporting information for critical severity vulnerabilities' remediation SLA specifics.
 
-**`eval_009`** (paraphrased) - F:0.80 R:0.90
+**`eval_009`** (paraphrased) - F:0.83 R:0.90
 - Query: Which regions is the platform live in simultaneously, and what's the yearly downtime cap needed to hit the uptime target?
-- Answer: The Global Cloud Platform is live in three primary active-active regions simultaneously: `us-east-1` (North Virginia), `eu-west-1` (Ireland), and `ap-southeast-1` (Singapore). To hit the uptime target
-- Judge reasoning: Most context support, but lacks detail in downtime calculation methodology
+- Answer: The Global Cloud Platform is live in three primary active-active regions simultaneously: `us-east-1` (North Virginia), `eu-west-1` (Ireland), and `ap-southeast-1` (Singapore) [cloud_architecture.md:1]
+- Judge reasoning: Answer mostly faithful, but lacks explicit yearly downtime threshold value.
 
-**`eval_010`** (paraphrased) - F:0.40 R:0.80
+**`eval_010`** (paraphrased) - F:0.80 R:0.75
 - Query: How is data protected while it's sitting in storage, and on what schedule do the keys protecting it get swapped out?
-- Answer: According to the enterprise security policy, data at rest is protected using Customer-Managed Keys (CMK) rotated automatically every 90 days via AWS KMS [security_compliance.md:1]. The keys protecting
-- Judge reasoning: Generated answer partially aligns with context, but lacks specificity on key rotation schedule
+- Answer: According to the Enterprise Security, Compliance & Data Governance Policy, data at rest is encrypted using Customer-Managed Keys (CMK) rotated automatically every 90 days via AWS KMS, as stated in [So
+- Judge reasoning: Most claims supported by contexts, but some context details were not included.
 
-**`eval_011`** (multi_hop) - F:0.33 R:0.00
+**`eval_011`** (multi_hop) - F:0.67 R:0.00
 - Query: If a customer tenant's account is deleted, how quickly must their vector embeddings be removed, and what database technology stores those vectors in the first place?
-- Answer: According to the provided context, if a customer tenant's account is deleted, their vector embeddings are hard-deleted within 24 hours [security_compliance.md:1]. As for the database technology that s
-- Judge reasoning: Some claim lack direct support from retrieved contexts and contain unnecessary information.
+- Answer: According to the enterprise security compliance policy [security_compliance.md, Page: 1], vector embedding records belonging to deleted customer tenants are hard-deleted within 24 hours.
 
-**`eval_012`** (multi_hop) - F:0.40 R:0.80
+The vector e
+- Judge reasoning: Most facts supported, but lack of relevant context reduces faithfulness score.
+
+**`eval_012`** (multi_hop) - F:0.00 R:0.00
 - Query: How does the 2-minute RTO for a full regional outage compare to the patching deadline for a critical severity vulnerability?
-- Answer: The 2-minute RTO for a full regional outage and the patching deadline for a critical severity vulnerability differ in terms of timeframes.
+- Answer: The information is unavailable in the enterprise knowledge base regarding the comparison between the 2-minute RTO for a full regional outage and the patching deadline for a critical severity vulnerabi
+- Judge reasoning: Answer not supported by any relevant retrieved context
 
-The 2-minute RTO for a full regional outage is a recovery ti
-- Judge reasoning: Generated answer only partially supports retrieved context's critical vulnerability patching deadline
-
-**`eval_013`** (distractor_heavy) - F:0.00 R:0.00
+**`eval_013`** (distractor_heavy) - F:0.80 R:0.50
 - Query: Specifically, what is the p99 latency budget for the Service-to-Service gRPC Mesh (Envoy), not the API Gateway or edge termination?
-- Answer: The p99 latency budget for the Service-to-Service gRPC Mesh (Envoy) is 5ms, as stated in [cloud_architecture.md:1].
-- Judge reasoning: Generated answer claims not supported by retrieved contexts, indicating a lack of factual basis
+- Answer: The p99 latency budget for the Service-to-Service gRPC Mesh (Envoy) is 5ms, as stated in [cloud_architecture.md, Page: 1].
+- Judge reasoning: The answer is mostly faithful but lacks supporting context on latency allocation
 
-**`eval_014`** (distractor_heavy) - F:0.60 R:0.70
+**`eval_014`** (distractor_heavy) - F:0.75 R:0.50
 - Query: What is the remediation deadline specifically for High severity vulnerabilities (CVSS 7.0-8.9), as distinct from Critical severity ones?
-- Answer: The remediation deadline for High severity vulnerabilities (CVSS 7.0-8.9) is 7 calendar days.
+- Answer: High severity vulnerabilities (CVSS 7.0 - 8.9) have a mandatory remediation deadline of 7 calendar days.
 
-[RATIONALE]: According to the [Source: security_compliance.md, Page: 1], High severity vulnerabilities wi
-- Judge reasoning: The generated answer directly matches the context, but lacks supporting context for critical vulnerabilities.
+[REF]: [security_compliance.md:1]
+- Judge reasoning: Generated answer partially matches retrieved contexts, but lacks specificity.
 
-**`eval_015`** (unanswerable) - F:1.00 R:1.00
+**`eval_015`** (unanswerable) - F:N/A R:N/A
 - Query: What is the required SLA uptime percentage for tier-2 and tier-3 microservices?
-- Answer: According to the Enterprise Cloud Infrastructure & Architecture Specification ([cloud_architecture.md:1]), the required SLA uptime percentage for tier-2 and tier-3 microservices is not explicitly stat
-- Judge reasoning: Correctly declined to answer (refusal detected).
+- Answer: Unfortunately, the provided context does not explicitly mention the required SLA uptime percentage for tier-2 and tier-3 microservices. The context mainly focuses on high availability standards for ti
+- Judge reasoning: Should have declined but did not (no refusal language detected) - possible hallucination.
 
-**`eval_016`** (unanswerable) - F:1.00 R:1.00
+**`eval_016`** (unanswerable) - F:N/A R:N/A
 - Query: How many employees are required to complete SOC-2 compliance training each year?
-- Answer: The provided context blocks do not mention the number of employees required to complete SOC-2 compliance training each year. Therefore, the information is unavailable in the enterprise knowledge base.
+- Answer: Unfortunately, the provided context blocks do not contain any information on the number of employees required to complete SOC-2 compliance training each year. The context blocks focus on security comp
 - Judge reasoning: Correctly declined to answer (refusal detected).
 
 **`eval_017`** (adversarial_citation_stress) - F:0.00 R:0.00
 - Query: According to the cloud architecture document, how often are third-party SOC-2 Type II audits conducted?
-- Answer: According to the cloud architecture document, [cloud_architecture.md, Page: 1], third-party SOC-2 Type II audits are conducted annually in Q3.
-- Judge reasoning: Generated answer does not cite correct source document
+- Answer: Third-party SOC-2 Type II audits are conducted annually in Q3, as stated in the security_compliance.md document [doc_name: Page: 1].
+- Judge reasoning: Generated answer fails to accurately reference ground truth document
 
-**`eval_018`** (adversarial_citation_stress) - F:0.40 R:0.20
+**`eval_018`** (adversarial_citation_stress) - F:0.25 R:0.50
 - Query: Per the security compliance policy, what AWS EKS Kubernetes version and instance type do the autoscaling worker clusters run on?
-- Answer: According to the Enterprise Cloud Infrastructure & Architecture Specification [cloud_architecture.md:1], the autoscaling worker clusters run on Kubernetes (EKS v1.30) with Karpenter autoscaling nodes 
-- Judge reasoning: Answer partially addresses query, missing critical detail about instance type
+- Answer: The AWS EKS Kubernetes version for the autoscaling worker clusters is EKS v1.30 [cloud_architecture.md:1]. However, the provided information does not specify the exact Kubernetes version used for auto
+- Judge reasoning: Contexts did not specify instance type or version for autoscaling
 

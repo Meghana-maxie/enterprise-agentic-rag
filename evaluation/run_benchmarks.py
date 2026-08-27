@@ -90,24 +90,58 @@ def run_benchmark_suite(
         retrieved_contexts = [c.get("content", "") for c in final_state.get("reranked_chunks", [])]
 
         if sample.get("unanswerable", False):
-            refusal_phrases = ["not available", "unavailable", "does not contain", "not explicitly stated", "not mentioned", "no information", "not covered"]
+            refusal_phrases = [
+                "not available",
+                "unavailable",
+                "does not contain",
+                "does not mention",
+                "doesn't mention",
+                "does not explicitly mention",
+                "doesn't explicitly mention",
+                "not explicitly stated",
+                "not explicitly mentioned",
+                "not mentioned",
+                "not specified",
+                "not provided",
+                "no information",
+                "no information provided",
+                "not covered",
+                "cannot be determined",
+                "unable to determine",
+            ]
             answer_lower = gen_answer.lower()
-            correctly_refused = any(phrase in answer_lower for phrase in refusal_phrases)
+            correctly_refused = any(
+                phrase in answer_lower for phrase in refusal_phrases
+            )
+
             results.append({
                 "id": sample["id"],
                 "query": query,
                 "category": sample.get("category", "uncategorized"),
                 "generated_answer": gen_answer,
-                "faithfulness": 1.0 if correctly_refused else 0.0,
-                "answer_relevance": 1.0 if correctly_refused else 0.0,
-                "context_precision": 1.0 if correctly_refused else 0.0,
-                "context_recall": 1.0 if correctly_refused else 0.0,
-                "reasoning": "Correctly declined to answer (refusal detected)." if correctly_refused else "Should have declined but did not (no refusal language detected) - possible hallucination.",
+                "faithfulness": None,
+                "answer_relevance": None,
+                "context_precision": None,
+                "context_recall": None,
+                "refusal_correct": correctly_refused,
+                "reasoning": (
+                    "Correctly declined to answer (refusal detected)."
+                    if correctly_refused
+                    else
+                    "Should have declined but did not "
+                    "(no refusal language detected) - possible hallucination."
+                ),
                 "latency_ms": elapsed_ms,
                 "citations_count": len(final_state.get("verified_citations", [])),
                 "critic_verdict": final_state.get("critic_verdict", "PASS"),
             })
-            print(f"  [{idx:02d}/{len(test_samples):02d}] '{query[:40]}...' -> Unanswerable check: {'PASS' if correctly_refused else 'FAIL'} | {elapsed_ms:.1f}ms")
+
+            print(
+                f"  [{idx:02d}/{len(test_samples):02d}] "
+                f"'{query[:40]}...' -> Unanswerable check: "
+                f"{'PASS' if correctly_refused else 'FAIL'} | "
+                f"{elapsed_ms:.1f}ms"
+            )
             continue
 
         # LLM-as-a-judge scoring
@@ -154,10 +188,32 @@ def run_benchmark_suite(
         print(f"  [{idx:02d}/{len(test_samples):02d}] '{query[:40]}...' -> Faithfulness: {metrics.faithfulness:.2f} | Precision: {metrics.context_precision:.2f} | {elapsed_ms:.1f}ms")
 
     # 4. Compute Aggregate Statistics
-    avg_faithfulness = float(np.mean([r["faithfulness"] for r in results]))
-    avg_relevance = float(np.mean([r["answer_relevance"] for r in results]))
-    avg_precision = float(np.mean([r["context_precision"] for r in results]))
-    avg_recall = float(np.mean([r["context_recall"] for r in results]))
+    answerable_results = [
+        r for r in results if r.get("refusal_correct") is None
+    ]
+
+    unanswerable_results = [
+        r for r in results if r.get("refusal_correct") is not None
+    ]
+
+    avg_faithfulness = float(
+        np.mean([r["faithfulness"] for r in answerable_results])
+    )
+    avg_relevance = float(
+        np.mean([r["answer_relevance"] for r in answerable_results])
+    )
+    avg_precision = float(
+        np.mean([r["context_precision"] for r in answerable_results])
+    )
+    avg_recall = float(
+        np.mean([r["context_recall"] for r in answerable_results])
+    )
+
+    refusal_accuracy = (
+        float(np.mean([r["refusal_correct"] for r in unanswerable_results]))
+        if unanswerable_results
+        else None
+    )
 
     p50_latency = float(np.percentile(latencies_ms, 50))
     p90_latency = float(np.percentile(latencies_ms, 90))
@@ -166,12 +222,35 @@ def run_benchmark_suite(
     # Per-category breakdown
     categories = sorted(set(r["category"] for r in results))
     category_stats = {}
+
     for cat in categories:
         cat_results = [r for r in results if r["category"] == cat]
+        cat_answerable = [
+            r for r in cat_results if r.get("refusal_correct") is None
+        ]
+        cat_unanswerable = [
+            r for r in cat_results if r.get("refusal_correct") is not None
+        ]
+
         category_stats[cat] = {
             "count": len(cat_results),
-            "avg_faithfulness": float(np.mean([r["faithfulness"] for r in cat_results])),
-            "avg_recall": float(np.mean([r["context_recall"] for r in cat_results])),
+            "answerable_count": len(cat_answerable),
+            "unanswerable_count": len(cat_unanswerable),
+            "avg_faithfulness": (
+                float(np.mean([r["faithfulness"] for r in cat_answerable]))
+                if cat_answerable
+                else None
+            ),
+            "avg_recall": (
+                float(np.mean([r["context_recall"] for r in cat_answerable]))
+                if cat_answerable
+                else None
+            ),
+            "refusal_accuracy": (
+                float(np.mean([r["refusal_correct"] for r in cat_unanswerable]))
+                if cat_unanswerable
+                else None
+            ),
         }
 
     # 5. Generate Markdown Report
@@ -181,6 +260,8 @@ Generated at: {time.strftime('%Y-%m-%d %H:%M:%S')}
 Total Test Queries: {len(test_samples)} (single run, not averaged across multiple runs)
 Source Documents: {len(list(docs_dir.glob('*.md')))} markdown files, {len(chunks)} chunks indexed
 Question Type Breakdown: {', '.join(f"{cat}={category_stats[cat]['count']}" for cat in categories)}
+Answerable Questions: {len(answerable_results)}
+Unanswerable Questions: {len(unanswerable_results)}
 Embedding Model: `{settings.EMBEDDING_MODEL}`
 Reranker: `{settings.RERANKER_MODEL}`
 Synthesis + Judge LLM: `{settings.OLLAMA_MODEL if settings.LLM_PROVIDER == "ollama" else settings.ANTHROPIC_MODEL}` (same model used for both - see Known Limitations)
@@ -198,17 +279,40 @@ Faithfulness Threshold: `{settings.FAITHFULNESS_THRESHOLD}`
 | **Answer Relevance** | >= 0.80 | **{avg_relevance:.3f}** | {'[PASS]' if avg_relevance >= 0.80 else '[FAIL]'} |
 | **Context Precision@K** | >= 0.80 | **{avg_precision:.3f}** | {'[PASS]' if avg_precision >= 0.80 else '[FAIL]'} |
 | **Context Recall** | >= 0.80 | **{avg_recall:.3f}** | {'[PASS]' if avg_recall >= 0.80 else '[FAIL]'} |
+| **Refusal Accuracy** | 100% | **{refusal_accuracy:.3f}** | {'[PASS]' if refusal_accuracy is not None and refusal_accuracy >= 1.0 else '[FAIL]'} |
 
 ---
 
 ## 1b. Score Breakdown by Question Category
 
-| Category | Count | Avg Faithfulness | Avg Recall |
-| :--- | :--- | :--- | :--- |
+| Category | Count | Answerable | Unanswerable | Avg Faithfulness | Avg Recall | Refusal Accuracy |
+| :--- | ---: | ---: | ---: | ---: | ---: | ---: |
 """
     for cat in categories:
         stats = category_stats[cat]
-        report_content += f"| `{cat}` | {stats['count']} | {stats['avg_faithfulness']:.3f} | {stats['avg_recall']:.3f} |\n"
+
+        faithfulness = (
+            f"{stats['avg_faithfulness']:.3f}"
+            if stats["avg_faithfulness"] is not None
+            else "N/A"
+        )
+        recall = (
+            f"{stats['avg_recall']:.3f}"
+            if stats["avg_recall"] is not None
+            else "N/A"
+        )
+        refusal = (
+            f"{stats['refusal_accuracy']:.3f}"
+            if stats["refusal_accuracy"] is not None
+            else "N/A"
+        )
+
+        report_content += (
+            f"| `{cat}` | {stats['count']} | "
+            f"{stats['answerable_count']} | {stats['unanswerable_count']} | "
+            f"{faithfulness} | {recall} | {refusal} |\n"
+        )
+
     report_content += f"""
 ---
 
@@ -228,11 +332,46 @@ Faithfulness Threshold: `{settings.FAITHFULNESS_THRESHOLD}`
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 """
     for r in results:
-        report_content += f"| `{r['id']}` | {r['query'][:40]}... | `{r['faithfulness']:.2f}` | `{r['context_precision']:.2f}` | `{r['context_recall']:.2f}` | {r['latency_ms']:.0f}ms | {r['critic_verdict']} |\n"
+        faithfulness = (
+            f"{r['faithfulness']:.2f}"
+            if r["faithfulness"] is not None
+            else "N/A"
+        )
+        precision = (
+            f"{r['context_precision']:.2f}"
+            if r["context_precision"] is not None
+            else "N/A"
+        )
+        recall = (
+            f"{r['context_recall']:.2f}"
+            if r["context_recall"] is not None
+            else "N/A"
+        )
+
+        report_content += (
+            f"| `{r['id']}` | {r['query'][:40]}... | "
+            f"`{faithfulness}` | `{precision}` | `{recall}` | "
+            f"{r['latency_ms']:.0f}ms | {r['critic_verdict']} |\n"
+        )
 
     report_content += "\n---\n\n## 4. Per-Query Reasoning (Judge Commentary)\n\n"
     for r in results:
-        report_content += f"**`{r['id']}`** ({r.get('category', 'uncategorized')}) - F:{r['faithfulness']:.2f} R:{r['context_recall']:.2f}\n"
+        faithfulness = (
+            f"{r['faithfulness']:.2f}"
+            if r["faithfulness"] is not None
+            else "N/A"
+        )
+        recall = (
+            f"{r['context_recall']:.2f}"
+            if r["context_recall"] is not None
+            else "N/A"
+        )
+
+        report_content += (
+            f"**`{r['id']}`** "
+            f"({r.get('category', 'uncategorized')}) - "
+            f"F:{faithfulness} R:{recall}\n"
+        )
         report_content += f"- Query: {r['query']}\n"
         report_content += f"- Answer: {r.get('generated_answer', '')[:200]}\n"
         report_content += f"- Judge reasoning: {r.get('reasoning', '')}\n\n"
