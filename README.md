@@ -18,6 +18,29 @@ Under the hood it combines two different search techniques (keyword matching and
 
 ---
 
+## 🎥 Demo
+
+**Query:**
+```json
+{
+  "query": "What are the latency budgets for the internal API Gateway Router and Vector Database engine?"
+}
+```
+
+**Response:**
+```json
+{
+  "answer": "The latency budget for the internal API Gateway Router is 15ms p99 latency, as specified in the [cloud_architecture.md, Page: 1]. For the Vector Database engine, the latency budget is 30ms p95 latency.",
+  "faithfulness_score": 0.67,
+  "critic_verdict": "PASS",
+  "citations": [
+    { "doc_name": "cloud_architecture.md", "page_number": 1, "is_valid": true }
+  ]
+}
+```
+
+This is real output from the golden evaluation set (`eval_002`), not a hand-written example — see `evaluation/evaluation_report.md` for the full run.
+
 ## System Architecture
 
 ```mermaid
