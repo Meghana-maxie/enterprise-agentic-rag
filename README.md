@@ -41,6 +41,41 @@ Under the hood it combines two different search techniques (keyword matching and
 
 This is real output from the golden evaluation set (`eval_002`), not a hand-written example — see `evaluation/evaluation_report.md` for the full run.
 
+## 📊 Benchmark Results
+
+Evaluated over the curated `evaluation/golden_dataset.json` test suite:
+
+| Metric | Target | Achieved Score | Evaluation Method |
+| :--- | :--- | :--- | :--- |
+| **Faithfulness (Groundedness)** | $\ge 0.85$ | **0.597** | Local LLM-as-a-Judge (llama3.2:3b) |
+| **Answer Relevance** | $\ge 0.80$ | **0.791** | Local LLM-as-a-Judge (llama3.2:3b) |
+| **Context Precision@K** | $\ge 0.80$ | **0.722** | Reciprocal Rank / NDCG |
+| **Context Recall** | $\ge 0.80$ | **0.558** | Ground Truth Match |
+| **Refusal Accuracy** | 100% | **1.000** | Unanswerable-question refusal detection |
+| **P50 Latency** | $< 800\text{ms}$ | **40,798 ms** | End-to-End Pipeline (CPU-only, llama3.2:3b) |
+| **P90 Latency** | $< 1500\text{ms}$ | **54,244 ms** | End-to-End Pipeline (CPU-only, llama3.2:3b) |
+
+---
+
+## 🎯 Production Highlights & Design Decisions
+
+1. **State Machine Architecture (LangGraph):**
+   - Implements a typed cyclic state machine (`AgentState`) featuring conditional branching, error recovery, and a bounded self-correction loop (max 1 retry) for under-grounded answers.
+2. **True Hybrid Retrieval & Rank Fusion:**
+   - Combines semantic dense vectors (`BAAI/bge-small-en-v1.5` via ONNX FastEmbed) with lexical keyword matching (`BM25Okapi`).
+   - Blends ranked lists using **Reciprocal Rank Fusion (RRF)**:
+     $$RRF(d) = \sum_{m \in M} \frac{1}{k + \text{rank}_m(d)} \quad (k = 60)$$
+3. **≈42 ms mean (37.8‑49.4 ms range) Local Cross‑Encoder Reranking:**
+   - Employs **FlashRank** (`ms-marco-MiniLM-L-12-v2`) locally to compute deep query‑document relevance without external API overhead or latency penalties.
+4. **2‑Stage Tiered Guardrails:**
+   - **Input Gatekeeper:** Zero-dependency compiled regex redacting PII (SSN, Email, Phone, Credit Cards, API Tokens) and blocking prompt injections prior to LLM invocation.
+   - **Output Gatekeeper:** Validates Pydantic response schemas and mathematically verifies that every inline citation `[doc:page]` maps to actual retrieved chunks.
+5. **Decoupled Evaluation Strategy (Online vs. Offline):**
+   - **Live Inline Critic:** Fast local lexical grounding checker (<15ms) operating on token overlap between synthesized claims and retrieved context, flagging ungrounded claims without secondary API costs.
+   - **Offline LLMOps Benchmarking:** Claude Haiku LLM-as-a-Judge running against `golden_dataset.json` measuring Faithfulness, Context Precision@K, Recall, and Relevance.
+
+---
+
 ## System Architecture
 
 ```mermaid
@@ -88,24 +123,7 @@ flowchart TD
 
 ---
 
-## 🎯 Production Highlights & Design Decisions
 
-1. **State Machine Architecture (LangGraph):**
-   - Implements a typed cyclic state machine (`AgentState`) featuring conditional branching, error recovery, and a bounded self-correction loop (max 1 retry) for under-grounded answers.
-2. **True Hybrid Retrieval & Rank Fusion:**
-   - Combines semantic dense vectors (`BAAI/bge-small-en-v1.5` via ONNX FastEmbed) with lexical keyword matching (`BM25Okapi`).
-   - Blends ranked lists using **Reciprocal Rank Fusion (RRF)**:
-     $$RRF(d) = \sum_{m \in M} \frac{1}{k + \text{rank}_m(d)} \quad (k = 60)$$
-3. **≈42 ms mean (37.8‑49.4 ms range) Local Cross‑Encoder Reranking:**
-   - Employs **FlashRank** (`ms-marco-MiniLM-L-12-v2`) locally to compute deep query‑document relevance without external API overhead or latency penalties.
-4. **2‑Stage Tiered Guardrails:**
-   - **Input Gatekeeper:** Zero-dependency compiled regex redacting PII (SSN, Email, Phone, Credit Cards, API Tokens) and blocking prompt injections prior to LLM invocation.
-   - **Output Gatekeeper:** Validates Pydantic response schemas and mathematically verifies that every inline citation `[doc:page]` maps to actual retrieved chunks.
-5. **Decoupled Evaluation Strategy (Online vs. Offline):**
-   - **Live Inline Critic:** Fast local lexical grounding checker (<15ms) operating on token overlap between synthesized claims and retrieved context, flagging ungrounded claims without secondary API costs.
-   - **Offline LLMOps Benchmarking:** Claude Haiku LLM-as-a-Judge running against `golden_dataset.json` measuring Faithfulness, Context Precision@K, Recall, and Relevance.
-
----
 
 ## 📄 ATS-Optimized Resume Bullet Points (Copy & Paste)
 
@@ -116,21 +134,7 @@ flowchart TD
 
 ---
 
-## 📊 Benchmark Results
 
-Evaluated over the curated `evaluation/golden_dataset.json` test suite:
-
-| Metric | Target | Achieved Score | Evaluation Method |
-| :--- | :--- | :--- | :--- |
-| **Faithfulness (Groundedness)** | $\ge 0.85$ | **0.597** | Local LLM-as-a-Judge (llama3.2:3b) |
-| **Answer Relevance** | $\ge 0.80$ | **0.791** | Local LLM-as-a-Judge (llama3.2:3b) |
-| **Context Precision@K** | $\ge 0.80$ | **0.722** | Reciprocal Rank / NDCG |
-| **Context Recall** | $\ge 0.80$ | **0.558** | Ground Truth Match |
-| **Refusal Accuracy** | 100% | **1.000** | Unanswerable-question refusal detection |
-| **P50 Latency** | $< 800\text{ms}$ | **40,798 ms** | End-to-End Pipeline (CPU-only, llama3.2:3b) |
-| **P90 Latency** | $< 1500\text{ms}$ | **54,244 ms** | End-to-End Pipeline (CPU-only, llama3.2:3b) |
-
----
 
 ## 🚀 Quickstart Guide
 
@@ -211,7 +215,7 @@ Executes end-to-end multi-stage retrieval and synthesis.
       "is_valid": true
     }
   ],
-  "faithfulness_score": 0.95,
+  "faithfulness_score": 0.67,
   "critic_verdict": "PASS",
   "execution_trace": [
     "InputGuard: is_safe=True, pii_count=0",
